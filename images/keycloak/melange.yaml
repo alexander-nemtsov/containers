@@ -1,0 +1,202 @@
+# Melange build configuration for minimal Keycloak
+# Downloads pre-built Keycloak distribution — Java-based IAM server
+# Uses Wolfi openjdk-21-jre at runtime
+
+package:
+  # Named `keycloak` (not `keycloak-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:keycloak:keycloak-minimal:*,
+  # cpe:2.3:a:keycloak-minimal:keycloak-minimal:*, ...). NVD indexes this
+  # product bare, as cpe:2.3:a:keycloak:keycloak:*, so none of them matched,
+  # and the Wolfi secdb missed it too.
+  name: keycloak
+  version: 26.8.1
+  epoch: 0
+  description: "Minimal Keycloak identity and access management server"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `keycloak`, so without this apk could install Wolfi's build instead
+    # of this source-built one. provider-priority is evaluated BEFORE version
+    # in that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  sha256: 4e2740b181faa2ea623a1c2ecf00855935311e546046e2f857615a47ed24cbe8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Needed by _stamp() in the patch-bundled-jars auto-block: keep-filename
+      # swaps must write a pom.properties into jars that ship none, or the
+      # scanner reads the (deliberately unchanged) filename and reports the old
+      # version forever. Without zip the stamp degrades to a WARN, not a failure.
+      - zip
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/keycloak/keycloak/releases/download/${{package.version}}/keycloak-${{package.version}}.tar.gz" \
+        -o /home/build/keycloak.tar.gz
+      echo "${{vars.sha256}}  /home/build/keycloak.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf keycloak.tar.gz && rm keycloak.tar.gz
+
+  # Install
+  - runs: |
+      mkdir -p "${{targets.destdir}}/opt/keycloak"
+      cp -r /home/build/keycloak-${{package.version}}/* "${{targets.destdir}}/opt/keycloak/"
+
+      # Ensure scripts are executable
+      chmod +x "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
+      rm -f "${{targets.destdir}}/opt/keycloak/lib/quarkus/transformed-bytecode.jar"
+      # Keycloak start-dev writes generated artifacts under /opt/keycloak.
+      chown -R 65532:65532 "${{targets.destdir}}/opt/keycloak"
+
+  - runs: |
+      echo "Verifying Keycloak installation..."
+      ls -lh "${{targets.destdir}}/opt/keycloak/bin/kc.sh"
+      ls "${{targets.destdir}}/opt/keycloak/lib/" | head -5
+
+  # patch-bundled-jars: auto-generated — do not edit manually
+  - runs: |
+      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
+      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.
+      #
+      # Mirrors are rotated BEFORE the wait is widened. repo1.maven.org and
+      # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses
+      # both; the googleapis mirror is separate infrastructure. Waiting a single
+      # host out does not work — opensearch (2026-08-23) and solr (2026-08-26)
+      # each burned 9 attempts over 4m15s against one host and still failed.
+      _BJ_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"
+      _bj_fetch() {  # $1=path-after-/maven2/  $2=output
+        for _r in 1 2 3 4; do
+          for _b in $_BJ_MIRRORS; do
+            if curl -fsSL --connect-timeout 15 --max-time 300 \
+                 --retry 2 --retry-all-errors "$_b/$1" -o "$2"; then return 0; fi
+          done
+          [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))
+        done
+        echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1
+      }
+      _stamp() {  # $1=jarfile $2=group-path $3=artifact $4=newver
+        # keep-filename leaves the old version in the filename, so a scanner only
+        # sees the real version if the jar carries META-INF/maven/**/pom.properties
+        # (syft precedence: pom.properties > filename > MANIFEST.MF). Jars that ship
+        # none — micrometer-core, postgresql — reported the OLD version forever
+        # while being genuinely patched on disk. Write the true coordinates so the
+        # SBOM and the scan match what the bytes actually are.
+        command -v zip >/dev/null 2>&1 || { echo "  WARN: no zip in build env; $3 keeps scanning as its old version"; return 0; }
+        unzip -l "$1" 2>/dev/null | grep -q "META-INF/maven/.*/pom.properties" && return 0
+        # Never touch a signed jar: an added entry can trip jarsigner verification.
+        unzip -l "$1" 2>/dev/null | grep -qE "META-INF/.*[.](SF|DSA|RSA|EC)$" && { echo "  $3 is signed, not stamping"; return 0; }
+        _g=$(echo "$2" | tr / .)
+        _d=$(mktemp -d) || return 0
+        mkdir -p "$_d/META-INF/maven/$_g/$3"
+        { echo "groupId=$_g"; echo "artifactId=$3"; echo "version=$4"; } > "$_d/META-INF/maven/$_g/$3/pom.properties"
+        ( cd "$_d" && zip -q "$1" "META-INF/maven/$_g/$3/pom.properties" )
+        rm -rf "$_d"
+        echo "  stamped $3 $4 pom.properties (jar ships none)"
+      }
+      _jarver() {  # echo the version a jar reports, or empty
+        _v=$(unzip -p "$1" "META-INF/maven/*/*/pom.properties" 2>/dev/null | sed -n "s/^version=//p" | head -1 | tr -d "\r")
+        [ -n "$_v" ] || _v=$(unzip -p "$1" META-INF/MANIFEST.MF 2>/dev/null | sed -n "s/^Implementation-Version: //p" | head -1 | tr -d "\r")
+        printf "%s" "$_v"
+      }
+      _vge() {  # is $1 >= $2 ?
+        [ -n "$1" ] || return 1
+        awk -v a="$1" -v b="$2" 'BEGIN{
+          na=split(a,A,/[._-]/); nb=split(b,B,/[._-]/); n=(na>nb?na:nb);
+          for(i=1;i<=n;i++){
+            if(A[i]~/^[0-9]+$/ && B[i]~/^[0-9]+$/){
+              if(A[i]+0!=B[i]+0) exit !((A[i]+0)>(B[i]+0));
+            } else if(A[i]!=B[i]) exit !(A[i]>B[i]); }
+          exit 0}'
+      }
+      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-
+        # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain
+        # jar. Native artifacts ship one jar per platform and the plain match skips
+        # them, which left a mixed netty in opensearch. Central publishes each
+        # classifier artifact, so they are pinned individually.
+        _c=""; [ "$7" = "-" ] || _c="-$7"
+        # rename: jar filename carries the version, match it exactly. keep-filename:
+        # filename stays the upstream version while contents change, so match any
+        # version of the artifact and overwrite in place. Two anchors on that
+        # match, both load-bearing: [0-9] pins the start of the version segment,
+        # or netty-codec matches netty-codec-http-*.jar and overwrites the http
+        # codec with the plain codec jar (keycloak died with NoClassDefFoundError
+        # FullHttpResponse); the ! -name excludes classifier jars
+        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is
+        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.
+        if [ "$6" = "keep-filename" ]; then
+          if [ -n "$_c" ]; then found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-[0-9]*$_c.jar")
+          else found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar"); fi
+        else
+          found=$(find "${{targets.destdir}}/opt/keycloak" -name "*$1-$3$_c.jar")
+        fi
+        [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }
+        _bj_fetch "$2/$1/$4/$1-$4$_c.jar" /tmp/_bj.jar
+        echo "$5  /tmp/_bj.jar" | sha256sum -c -
+        _stamp /tmp/_bj.jar "$2" "$1" "$4"
+        for f in $found; do
+          if [ "$6" = "keep-filename" ]; then
+            _have=$(_jarver "$f")
+            if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi
+            cp /tmp/_bj.jar "$f"
+          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4$_c.jar"; rm -f "$f"; fi
+          echo "  patched $1 $3 -> $4 ($6$_c)"
+        done
+        rm -f /tmp/_bj.jar
+      }
+      _swap bcprov-jdk18on org/bouncycastle 1.84 1.85 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7 keep-filename -
+      _swap jackson-core com/fasterxml/jackson/core 2.21.5 2.21.6 36111c3a4372cd5c2be6f4ec44a050382487920f3fc38ca3015c9c1678bd7c56 keep-filename -
+      _swap jackson-databind com/fasterxml/jackson/core 2.21.5 2.21.6 62134a98de12d0a421cd2f5b9854c8e63f10f524b0341e66cfd31a4326f6a329 keep-filename -
+      _swap jackson-dataformat-cbor com/fasterxml/jackson/dataformat 2.21.5 2.21.6 1682391f5deb36acbd34702eeeecd9f2f450c8e468504de05784a27aabdef5e3 keep-filename -
+      _swap jackson-dataformat-yaml com/fasterxml/jackson/dataformat 2.21.5 2.21.6 e5a4ea8c86f9f8d068bb280b69be5c450f263343b4bf1d81be8586d4e8d5c698 keep-filename -
+      _swap jackson-datatype-jdk8 com/fasterxml/jackson/datatype 2.21.5 2.21.6 ffcb606cc9fec4ad22c096fdc101bf1b6eb17b5f53c741ab306632ecdf4a438e keep-filename -
+      _swap jackson-datatype-jsr310 com/fasterxml/jackson/datatype 2.21.5 2.21.6 1d82027afe574c63e24df72eb109f98de02dff3bb5adf81f0174b27088490067 keep-filename -
+      _swap jackson-jakarta-rs-base com/fasterxml/jackson/jakarta/rs 2.21.5 2.21.6 4e8da867d765d2911d3484ef2f10d7a6f10ac45e1eda6b50c8505d0b4f997b0e keep-filename -
+      _swap jackson-jakarta-rs-yaml-provider com/fasterxml/jackson/jakarta/rs 2.21.5 2.21.6 cc0c924b7b534d99bfe7038f6727dabb8b945eddb7832754b9e9b36ee43a0847 keep-filename -
+      _swap jackson-module-jakarta-xmlbind-annotations com/fasterxml/jackson/module 2.21.5 2.21.6 9fe4f941ba14dfa49b6120a0f2c307b06bfd60bce797f9cfed72a2abca8befdf keep-filename -
+      _swap jackson-module-parameter-names com/fasterxml/jackson/module 2.21.5 2.21.6 24f5c6f75fad85d7e2e3f600ef4832a839def8a2bf1e6f2fc5a0577cef54e01d keep-filename -
+      _swap micrometer-commons io/micrometer 1.16.3 1.16.6 45aff76226830db257f4bc39a5bcff83d633e572fee9dc4e45cfa12af9a0a49a keep-filename -
+      _swap micrometer-core io/micrometer 1.16.3 1.16.6 1957ef2deaffbc1fb98cebfd0f5b3109ecf19c994d7e5378598c20747ba8d68b keep-filename -
+      _swap micrometer-observation io/micrometer 1.16.3 1.16.6 4c0826d5e7c8522a8e111470b4e77f77b0a10f520eb5502ddd143fdbcedb2340 keep-filename -
+      _swap micrometer-registry-prometheus-simpleclient io/micrometer 1.16.3 1.16.6 5f665369724caa8ffbb3f83a492b02d1de17a1420758e4a55debcb6ee2bd5e2a keep-filename -
+      _swap netty-buffer io/netty 4.1.135.Final 4.1.137.Final f474b14c7734f15e0540394cb6f39d67777b7581a42919e4ac89d253d4efd929 keep-filename -
+      _swap netty-codec-dns io/netty 4.1.135.Final 4.1.137.Final 2d9a33ce41bd9f6f607df95039e42518a1fca16f83c9bbfe72beb57df6e2489f keep-filename -
+      _swap netty-codec-haproxy io/netty 4.1.135.Final 4.1.137.Final 5ffa58b94c5ac48fb7e41843c18acf7a268e90b5b85423987829c9291ce3a5df keep-filename -
+      _swap netty-codec-http2 io/netty 4.1.135.Final 4.1.137.Final 576ddcfb51b78e86f145c9a52b60e500b1a1d5a257cafec8aa5416ffba044b49 keep-filename -
+      _swap netty-codec-http io/netty 4.1.135.Final 4.1.137.Final 0535bb5a736472bef5c948d15eb273c4ab9f796656fc7c5d6b982ad92bddbd49 keep-filename -
+      _swap netty-codec-socks io/netty 4.1.135.Final 4.1.137.Final 4a6190e08988c058bfeef2b5965e71946439c771abf721c68f4039b4e7b023e8 keep-filename -
+      _swap netty-codec io/netty 4.1.135.Final 4.1.137.Final 9987b6a660b0a6b1f0d791485dae33180b3d1c63687c006fe6d3fd025e9e3798 keep-filename -
+      _swap netty-common io/netty 4.1.135.Final 4.1.137.Final d31926b01adcc07af86f5e27b81b6d6c115df17d366e835d1fc3f5a1924e7e52 keep-filename -
+      _swap netty-handler-proxy io/netty 4.1.135.Final 4.1.137.Final 843de10c4cef34cbc1a5344090f1b57db532fbebf141559862da675f6b656df4 keep-filename -
+      _swap netty-handler io/netty 4.1.135.Final 4.1.137.Final d0e4c6ee4779f59f6ab2fb5d388e4f57147c82270164b37945764bb9bda96a44 keep-filename -
+      _swap netty-resolver-dns io/netty 4.1.135.Final 4.1.137.Final 898d63ca62ed68ff46543c5344f969424b417f1e8d082fe2bb0181ba10144194 keep-filename -
+      _swap netty-resolver io/netty 4.1.135.Final 4.1.137.Final b4cf2aeedd9fc7c8c439bbfe574f63cfe5b83392e88bbc07ca0e8424b7cff955 keep-filename -
+      _swap netty-transport-classes-epoll io/netty 4.1.135.Final 4.1.137.Final 55049554b799dc8e53bf234fffa36e001f7b5b65c32994b9bd59fc6356f1c52f keep-filename -
+      _swap netty-transport-native-epoll io/netty 4.1.135.Final 4.1.137.Final 185db6053e0e9573d36fa4eb6567b26139afaa4daa7bf5a068e661568304542b keep-filename linux-x86_64
+      _swap netty-transport-native-epoll io/netty 4.1.135.Final 4.1.137.Final 82fb63a2dc90c0bddb81e04065a1c06fb4c5be722ad5d64b46491daf8b6f9a01 keep-filename linux-aarch_64
+      _swap netty-transport-native-epoll io/netty 4.1.135.Final 4.1.137.Final b2eb04dbb6ec6cc8fc00aed37bb86b7aed1ccb87722eda44c90652a7d41fbdfe keep-filename -
+      _swap netty-transport-native-unix-common io/netty 4.1.135.Final 4.1.137.Final 8056e7637f9948f953314894cf995ab664711b66c73c4cd5b593ae84f0b1048c keep-filename -
+      _swap netty-transport io/netty 4.1.135.Final 4.1.137.Final 6251adc2a2921572382732a2db188d4f4f2251fd6ebb49c5d44bbf33d6bfb1a7 keep-filename -
+      _swap postgresql org/postgresql 42.7.11 42.7.12 31fbf6f06b2217fb51d5100cee51b22625cc81640da0679b47914e54c1e6377c keep-filename -
+  # end-patch-bundled-jars
+update:
+  enabled: true
+  github:
+    identifier: keycloak/keycloak
+    use-tag: true
+    tag-filter: "26."

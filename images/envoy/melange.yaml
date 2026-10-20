@@ -1,0 +1,76 @@
+package:
+  # Named `envoy` (not `envoy-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, so the `-minimal`
+  # suffix produced cpe:2.3:a:envoy-minimal:envoy-minimal:* — which matches
+  # nothing in NVD (indexed as cpe:2.3:a:envoy:envoy:*) and nothing in the
+  # Wolfi secdb either, so both of grype's matchers missed every CVE for this
+  # package.
+  name: envoy
+  version: 1.40.0
+  epoch: 0
+  description: "Minimal Envoy proxy built from upstream releases"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `envoy` package today, but if it ever adds one at a higher version,
+    # apk would silently install Wolfi's build instead of this source-built
+    # one. provider-priority is evaluated BEFORE version in that comparator, so
+    # this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  sha256_x86: 8aa137a7d00994ce43f613556f5a120709229f63bedb86eedde5ccbc402c2b80
+  sha256_arm: 03cacc952561635c0b7d2a829291f341dadbebc32050475efbe7321b1bbe18c2
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - curl
+      - glibc
+      - libstdc++
+      - libgcc
+      - ld-linux
+
+pipeline:
+  - runs: |
+      BUILD_ARCH=$(uname -m)
+      case "$BUILD_ARCH" in
+        x86_64) ARCH_NAME="x86_64" ;;
+        aarch64) ARCH_NAME="aarch_64" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/envoyproxy/envoy/releases/download/v${{package.version}}/envoy-${{package.version}}-linux-${ARCH_NAME}" \
+        -o /tmp/envoy
+
+      if [ "$BUILD_ARCH" = "x86_64" ]; then
+        CHECKSUM="${{vars.sha256_x86}}"
+      else
+        CHECKSUM="${{vars.sha256_arm}}"
+      fi
+
+      echo "${CHECKSUM}  /tmp/envoy" | sha256sum -c -
+      chmod +x /tmp/envoy
+
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /tmp/envoy "${{targets.destdir}}/usr/bin/envoy"
+
+  - runs: |
+      "${{targets.destdir}}/usr/bin/envoy" --version
+
+update:
+  enabled: true
+  github:
+    identifier: envoyproxy/envoy
+    use-tag: true
+    tag-filter: "v"

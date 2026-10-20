@@ -1,0 +1,136 @@
+# Melange build configuration for minimal OpenTofu
+# Pure Go from source. Single static `tofu` binary.
+# License: MPL-2.0 (OpenTofu / Linux Foundation).
+
+package:
+  # Named `opentofu` (not `opentofu-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:opentofu:opentofu-minimal:*,
+  # cpe:2.3:a:opentofu-minimal:opentofu-minimal:*, ...). NVD indexes this
+  # product bare, as cpe:2.3:a:opentofu:opentofu:*, so none of them matched,
+  # and the Wolfi secdb missed it too.
+  name: opentofu
+  version: 1.13.1
+  epoch: 0
+  description: "Minimal OpenTofu (Terraform-compatible IaC) built from source"
+  copyright:
+    - license: MPL-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `opentofu` package today, but if it ever adds one at a higher
+    # version, apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of opentofu source tarball - updated by update-versions.yml workflow
+  sha256: 54c534f3d1df253430cc02220d94b91c1d563e95f040bc24d29a4c45bc197838
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - go-1.27
+      - git
+
+pipeline:
+  # Download and verify OpenTofu source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/opentofu/opentofu/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/opentofu.tar.gz
+
+      echo "${{vars.sha256}}  /home/build/opentofu.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf opentofu.tar.gz
+      rm opentofu.tar.gz
+
+  # Build the tofu binary (static).
+  # version.rawVersion is //go:embed'd from version/VERSION (already correct in
+  # the tag tarball); version.dev defaults to "yes" which appends a "-dev"
+  # prerelease marker, so set it to "no" for a clean release version string.
+  # patch-go-deps: auto-generated — do not edit manually (test-and-keep)
+  - runs: |
+      export GOWORK=off
+      _retry() { local i; for i in 5 15 30; do "$@" && return 0; echo "retry: $* failed, sleeping ${i}s"; sleep $i; done; "$@"; }
+      _pgd_workfix() {  # raise an enclosing go.work above every member's go directive
+        # A go.work whose `go` directive sits below a bumped member's requirement
+        # hard-fails every go command in the tree — even under GOWORK=off — before
+        # the build is reached. x/crypto v0.56.0 declares go 1.26.0, which stranded
+        # prometheus (go.work at 1.25.8) and etcd (1.26). Raise the workspace to the
+        # build toolchain first so a bump can never sit above it; the explicit
+        # go.work argument keeps `go work edit` working under GOWORK=off. No-op for
+        # the majority of images, which ship no workspace at all.
+        _d="$1"
+        while [ -n "$_d" ] && [ "$_d" != "/" ]; do
+          if [ -f "$_d/go.work" ]; then
+            _gv=$(go env GOVERSION | sed 's/^go//')
+            echo "pgd-work: raising $_d/go.work go directive to $_gv"
+            ( cd "$_d" && go work edit -go="$_gv" go.work ) || true
+            return 0
+          fi
+          _d=$(dirname "$_d")
+        done
+      }
+      for root in /home/build/opentofu-${{package.version}}; do
+        [ -f "$root/go.mod" ] || continue
+        _pgd_workfix "$root"
+        ( set -e
+          cd "$root"
+          cp go.mod .pgd-base.mod
+          [ -f go.sum ] && cp go.sum .pgd-base.sum || true
+          # Probe each candidate CVE fix against the real build; keep the ones
+          # that still compile, drop those that need upstream to update its
+          # vendored code first (logged, not silent). Patches everything safely
+          # patchable now instead of skipping the image wholesale.
+          KEPT=""
+          for fix in  filippo.io/edwards25519@v1.2.0 github.com/Azure/go-ntlmssp@v0.1.1 github.com/apache/thrift@v0.24.0 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 github.com/aws/aws-sdk-go-v2/service/lambda@v1.88.5 github.com/aws/aws-sdk-go-v2/service/s3@v1.99.0 github.com/cloudflare/circl@v1.6.3 github.com/containerd/containerd/v2@v2.2.1 github.com/containerd/containerd@v1.7.33 github.com/docker/cli@v29.2.1+incompatible github.com/go-chi/chi/v5@v5.3.0 github.com/go-git/go-billy/v5@v5.9.0 github.com/go-git/go-git/v5@v5.19.1 github.com/go-jose/go-jose/v4@v4.1.4 github.com/google/cel-go@v0.29.0 github.com/gorilla/websocket@v1.5.4-0.20250319132907-e064f32e3674 github.com/insomniacslk/dhcp@v0.0.0-20260719225207-c76316d4aa82 github.com/klauspost/compress@v1.18.7 github.com/moby/buildkit@v0.28.1 github.com/moby/go-archive@v0.3.0 github.com/moby/sys/user@v0.4.1 github.com/nwaples/rardecode/v2@v2.2.2 github.com/opencontainers/selinux@v1.13.1 github.com/projectcontour/contour@v1.33.5 github.com/prometheus/prometheus@v0.311.3 github.com/quic-go/quic-go@v0.59.1 github.com/rabbitmq/amqp091-go@v1.13.0 github.com/rclone/rclone@v1.74.3 github.com/russellhaering/goxmldsig@v1.6.0 github.com/sigstore/fulcio@v1.8.6 github.com/ulikunitz/xz@v0.5.15 github.com/valyala/fasthttp@v1.70.0 github.com/yuin/goldmark@v1.7.17 go.etcd.io/etcd/client/pkg/v3@v3.5.33 go.mongodb.org/mongo-driver@v1.17.9 go.temporal.io/api@v1.50.1 go.temporal.io/server@v1.28.4 golang.org/x/image@v0.45.0 golang.org/x/mod@v0.42.0 golang.org/x/oauth2@v0.36.0 google.golang.org/grpc@v1.83.2 oras.land/oras-go/v2@v2.6.2 software.sslmate.com/src/go-pkcs12@v0.7.2 go.opentelemetry.io/otel/bridge/opentracing@v1.47.0 go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.47.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.47.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.47.0 go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.47.0 go.opentelemetry.io/otel/sdk@v1.47.0 go.opentelemetry.io/otel@v1.47.0 golang.org/x/crypto@v0.58.0 golang.org/x/net@v0.61.0 golang.org/x/sys@v0.49.0 golang.org/x/text@v0.43.0 golang.org/x/term@v0.47.0 golang.org/x/time@v0.16.0 golang.org/x/sync@v0.24.0 golang.org/x/tools@v0.52.0; do
+            cp .pgd-base.mod go.mod
+            [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
+            if go get $KEPT "$fix" >/dev/null 2>&1 && GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu >/dev/null 2>&1; then
+              KEPT="$KEPT $fix"; echo "pgd-testkeep KEPT: $fix"
+            else
+              echo "pgd-testkeep dropped (needs upstream): $fix"
+            fi
+          done
+          cp .pgd-base.mod go.mod
+          [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true
+          if [ -n "$KEPT" ]; then _retry go get $KEPT; fi
+          go mod tidy -e
+          rm -f .pgd-base.mod .pgd-base.sum
+          [ ! -d vendor ] || go mod vendor
+        )
+      done
+  # end-patch-go-deps
+  - runs: |
+      cd /home/build/opentofu-${{package.version}}
+      GOTOOLCHAIN=local CGO_ENABLED=0 go build \
+        -trimpath \
+        -ldflags="-s -w -X github.com/opentofu/opentofu/version.dev=no" \
+        -o /home/build/tofu-bin \
+        ./cmd/tofu
+
+  # Install binary
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/tofu-bin "${{targets.destdir}}/usr/bin/tofu"
+      chmod 0755 "${{targets.destdir}}/usr/bin/tofu"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying tofu binary..."
+      "${{targets.destdir}}/usr/bin/tofu" version

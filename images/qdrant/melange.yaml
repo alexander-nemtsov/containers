@@ -1,0 +1,89 @@
+# Melange build configuration for minimal Qdrant
+# Builds Qdrant vector search engine from source (Rust)
+# Used for AI/ML workloads: RAG pipelines, semantic search, recommendations
+
+package:
+  # Named `qdrant` (not `qdrant-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:qdrant:qdrant-minimal:*,
+  # cpe:2.3:a:qdrant-minimal:qdrant-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:qdrant:qdrant:*, so none of them matched, and the Wolfi
+  # secdb missed it too.
+  name: qdrant
+  version: 1.19.2
+  epoch: 0
+  description: "Minimal Qdrant vector search engine built from source"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `qdrant`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  sha256: 8af0519b85cea0200b402bc7822960cd4281b44b7d2930f3fef4f35db61a3df9
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - rust-1.99
+      - cmake
+      - protoc
+      - protobuf-dev
+      - openssl-dev
+      - pkgconf
+
+pipeline:
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/qdrant/qdrant/archive/refs/tags/v${{package.version}}.tar.gz" \
+        -o /home/build/qdrant.tar.gz
+      echo "${{vars.sha256}}  /home/build/qdrant.tar.gz" | sha256sum -c -
+      cd /home/build && tar xzf qdrant.tar.gz && rm qdrant.tar.gz
+
+  - runs: |
+      cd /home/build/qdrant-${{package.version}}
+      # prost-build requires protoc; set PROTOC explicitly so it's found reliably
+      export PROTOC=/usr/bin/protoc
+      cargo build --release --bin qdrant
+
+  - runs: |
+      cd /home/build/qdrant-${{package.version}}
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp target/release/qdrant "${{targets.destdir}}/usr/bin/"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/qdrant"
+
+      # Ship default config
+      mkdir -p "${{targets.destdir}}/etc/qdrant"
+      cp config/config.yaml "${{targets.destdir}}/etc/qdrant/"
+
+      # Remove cargo registry cache — melange's license scanner cannot change
+      # permissions on registry source files, causing the post-build check to fail
+      rm -rf /home/build/.cargo/registry
+
+  - runs: |
+      echo "Verifying Qdrant build..."
+      "${{targets.destdir}}/usr/bin/qdrant" --version
+      ls -lh "${{targets.destdir}}/usr/bin/qdrant"
+
+update:
+  enabled: true
+  github:
+    identifier: qdrant/qdrant
+    use-tag: true
+    tag-filter: "v1."

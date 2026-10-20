@@ -1,0 +1,21 @@
+{
+  "name": "Wolfi SDK",
+  "image": "ghcr.io/wolfi-dev/sdk:latest",
+  "privileged": true,
+  "remoteUser": "root",
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/../keyring,target=/workspaces/keyring,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/../packages,target=/workspaces/packages,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/../sbom,target=/workspaces/sbom,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitLab.gitlab-workflow"
+      ]
+    }
+  }
+}

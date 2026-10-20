@@ -1,0 +1,259 @@
+# Melange build configuration for minimal Apache Pulsar
+# Official binary release + custom JRE via jlink (kafka/zookeeper JVM pattern).
+# Pulsar 4.x requires Java 21. bin/pulsar is a bash launcher (prod image ships bash).
+# License: Apache-2.0.
+
+package:
+  # Named `pulsar` (not `pulsar-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:pulsar:pulsar-minimal:*,
+  # cpe:2.3:a:pulsar-minimal:pulsar-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:pulsar:pulsar:*, so none of them matched, and the Wolfi
+  # secdb missed it too.
+  name: pulsar
+  version: 5.0.0
+  epoch: 0
+  description: "Minimal Apache Pulsar messaging/streaming server with custom JRE (jlink)"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `pulsar` package today, but if it ever adds one at a higher version,
+    # apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA512 of apache-pulsar-{version}-bin.tar.gz - updated by update-versions.yml
+  sha512: c7fc789d05103e8fc4c95545ae6cd78cd6e24cbb016a65edf3f9d3bfd2a6a1cf673dbd4eb1f0c02271eecb5ccbb297e3ac3bb44ad47f31755614870d1ffecce5
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK 21 needed for jlink (build-time only); Pulsar 4.x targets Java 21.
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify the official Pulsar binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://dlcdn.apache.org/pulsar/pulsar-${{package.version}}/apache-pulsar-${{package.version}}-bin.tar.gz" \
+        -o /home/build/pulsar.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://downloads.apache.org/pulsar/pulsar-${{package.version}}/apache-pulsar-${{package.version}}-bin.tar.gz" \
+        -o /home/build/pulsar.tar.gz || \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://archive.apache.org/dist/pulsar/pulsar-${{package.version}}/apache-pulsar-${{package.version}}-bin.tar.gz" \
+        -o /home/build/pulsar.tar.gz
+
+      echo "${{vars.sha512}}  /home/build/pulsar.tar.gz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf pulsar.tar.gz
+      rm pulsar.tar.gz
+
+  # Custom minimal JRE (Java 21). Pulsar bundles Netty, BookKeeper (RocksDB JNI) and
+  # ZooKeeper, so the module set is generous: crypto + jgss/sasl for TLS/auth,
+  # management(.agent)/jfr for JMX, jdk.sctp/jdk.net for Netty transports,
+  # jdk.unsupported for Netty/RocksDB sun.misc.Unsafe usage.
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.jfr,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.net,jdk.sctp,jdk.security.auth,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  - runs: |
+      PULSAR_SRC="/home/build/apache-pulsar-${{package.version}}"
+
+      # Custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Pulsar install — ship the runtime bits (bin/conf/lib). Drop examples/ and the
+      # functions runtime (instances/) to slim; standalone messaging doesn't need them.
+      mkdir -p "${{targets.destdir}}/opt/pulsar"
+      cp -a "$PULSAR_SRC"/bin "$PULSAR_SRC"/conf "$PULSAR_SRC"/lib \
+        "${{targets.destdir}}/opt/pulsar/"
+
+      # Entrypoint: run a single-node standalone cluster in the foreground with data
+      # and logs under /var/lib/pulsar (writable) — /opt/pulsar is read-only.
+      cat > "${{targets.destdir}}/usr/bin/pulsar-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+      export PULSAR_HOME=/opt/pulsar
+      export JAVA_HOME=/usr/lib/jvm/java-21-minimal
+      export PULSAR_LOG_DIR="${PULSAR_LOG_DIR:-/var/lib/pulsar/logs}"
+      mkdir -p "$PULSAR_LOG_DIR" /var/lib/pulsar/zookeeper /var/lib/pulsar/bookkeeper
+      exec /opt/pulsar/bin/pulsar standalone \
+        --zookeeper-dir /var/lib/pulsar/zookeeper \
+        --bookkeeper-dir /var/lib/pulsar/bookkeeper "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/pulsar-entrypoint.sh"
+
+      # Whole static install world-readable/traversable (we run as nonroot 65532).
+      chmod -R a+rX "${{targets.destdir}}/opt/pulsar"
+
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking Pulsar install..."
+      test -x "${{targets.destdir}}/opt/pulsar/bin/pulsar"
+      ls "${{targets.destdir}}"/opt/pulsar/lib/org.apache.pulsar-pulsar-broker-*.jar
+      test -f "${{targets.destdir}}/opt/pulsar/conf/standalone.conf"
+
+  # patch-bundled-jars: auto-generated — do not edit manually
+  - runs: |
+      # Bundled-jar CVE fixes, sha256-pinned. Regenerated from grype by
+      # .github/scripts/patch-bundled-jars.sh — do not edit by hand.
+      #
+      # Mirrors are rotated BEFORE the wait is widened. repo1.maven.org and
+      # repo.maven.apache.org both sit behind Cloudflare, so a WAF 403 refuses
+      # both; the googleapis mirror is separate infrastructure. Waiting a single
+      # host out does not work — opensearch (2026-08-23) and solr (2026-08-26)
+      # each burned 9 attempts over 4m15s against one host and still failed.
+      _BJ_MIRRORS="https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2 https://repo.maven.apache.org/maven2"
+      _bj_fetch() {  # $1=path-after-/maven2/  $2=output
+        for _r in 1 2 3 4; do
+          for _b in $_BJ_MIRRORS; do
+            if curl -fsSL --connect-timeout 15 --max-time 300 \
+                 --retry 2 --retry-all-errors "$_b/$1" -o "$2"; then return 0; fi
+          done
+          [ "$_r" -lt 4 ] && sleep $(( _r * 30 ))
+        done
+        echo "bundled-jar: all Maven mirrors refused $1" >&2; return 1
+      }
+      _swap() {  # $1=artifact $2=group-path $3=oldver $4=newver $5=sha256 $6=mode $7=classifier|-
+        # $7 is a per-platform classifier (linux-x86_64, ...) or "-" for the plain
+        # jar. Native artifacts ship one jar per platform and the plain match skips
+        # them, which left a mixed netty in opensearch. Central publishes each
+        # classifier artifact, so they are pinned individually.
+        _c=""; [ "$7" = "-" ] || _c="-$7"
+        # rename: jar filename carries the version, match it exactly. keep-filename:
+        # filename stays the upstream version while contents change, so match any
+        # version of the artifact and overwrite in place. Two anchors on that
+        # match, both load-bearing: [0-9] pins the start of the version segment,
+        # or netty-codec matches netty-codec-http-*.jar and overwrites the http
+        # codec with the plain codec jar (keycloak died with NoClassDefFoundError
+        # FullHttpResponse); the ! -name excludes classifier jars
+        # (netty-transport-native-epoll-<v>-linux-x86_64.jar), whose content is
+        # NOT what $1-$4.jar holds — overwriting them drops the bundled .so.
+        if [ "$6" = "keep-filename" ]; then
+          if [ -n "$_c" ]; then found=$(find "${{targets.destdir}}/opt/pulsar" -name "*$1-[0-9]*$_c.jar")
+          else found=$(find "${{targets.destdir}}/opt/pulsar" -name "*$1-[0-9]*.jar" ! -name "*$1-[0-9]*-*.jar"); fi
+        else
+          found=$(find "${{targets.destdir}}/opt/pulsar" -name "*$1-$3$_c.jar")
+        fi
+        [ -n "$found" ] || { echo "  $1 $3$_c not present (upstream may already ship >=$4)"; return 0; }
+        _bj_fetch "$2/$1/$4/$1-$4$_c.jar" /tmp/_bj.jar
+        echo "$5  /tmp/_bj.jar" | sha256sum -c -
+        for f in $found; do
+          if [ "$6" = "keep-filename" ]; then
+            _have=$(_jarver "$f")
+            if _vge "$_have" "$4"; then echo "  $1 already at $_have (>= $4), leaving it"; continue; fi
+            cp /tmp/_bj.jar "$f"
+          else cp /tmp/_bj.jar "$(dirname "$f")/$1-$4$_c.jar"; rm -f "$f"; fi
+          echo "  patched $1 $3 -> $4 ($6$_c)"
+        done
+        rm -f /tmp/_bj.jar
+      }
+      _swap async-http-client-netty-utils org/asynchttpclient 2.15.0 2.16.1 5dc30eb034ec1daea2578e3ecf861ee3212f8693170f7da53cc3503a9ff44971 rename -
+      _swap async-http-client org/asynchttpclient 2.15.0 2.16.1 9e76dd36d4ef6e13e81e2478f4e18723cabda0fe2e3b7ad6a4f41990969a7c90 rename -
+      _swap bcprov-jdk18on org/bouncycastle 1.84 1.85 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7 rename -
+      _swap jackson-annotations com/fasterxml/jackson/core 2.18.9 2.18.11 9eab0d36da981645392427eedcb087e13be542488e37f935723dc0be50d18a53 rename -
+      _swap jackson-core com/fasterxml/jackson/core 2.18.9 2.18.11 825fa72dfb9e2f8a642322f1390dbac22c30d15ebd6dc6b3772158821ee124eb rename -
+      _swap jackson-databind com/fasterxml/jackson/core 2.18.9 2.18.11 075ad94a76c3edf83e1972dc26f476361eb6b9d0e260d93fc11105509bc79cab rename -
+      _swap jackson-dataformat-yaml com/fasterxml/jackson/dataformat 2.18.9 2.18.11 20ed1e926bcfffb8a067dc45bb5ed4aef0dc2388be973e461c789781612c35ca rename -
+      _swap jackson-datatype-jdk8 com/fasterxml/jackson/datatype 2.18.9 2.18.11 efb0704bc8c9ff1eab7f1f8d0aabe3365d601b875b6dfc2a89ff750f9e0a8d2f rename -
+      _swap jackson-datatype-jsr310 com/fasterxml/jackson/datatype 2.18.9 2.18.11 b2bab3e2c34f7b0b7f83bdb4de4c869c884466f756d76ed661ab3d2d9f35d1d3 rename -
+      _swap jackson-jaxrs-base com/fasterxml/jackson/jaxrs 2.18.9 2.18.11 7ac14feba8c41f36d31c8e4f249de8a02971054a4dcc5c8529f9d0131bad2f4b rename -
+      _swap jackson-jaxrs-json-provider com/fasterxml/jackson/jaxrs 2.18.9 2.18.11 347118c93c9c9d202f71d635a9fc33bc822c65f2be7acd7c1309adfaf47e2697 rename -
+      _swap jackson-module-jaxb-annotations com/fasterxml/jackson/module 2.18.9 2.18.11 6ef536c210df2d5ba2ece053567702eee714a8543b36b1c3dcc430073b12d065 rename -
+      _swap jackson-module-jsonSchema com/fasterxml/jackson/module 2.18.9 2.18.11 a00a4680a9b4b060cecb7895c88ce7e020e56aa5a494098d6d325d25547eefd7 rename -
+      _swap jackson-module-parameter-names com/fasterxml/jackson/module 2.18.9 2.18.11 98175757cb61856bed6e880bd272c455ee296f8f15bfa0e691422c416557fe42 rename -
+      _swap jline-builtins org/jline 4.2.1 4.3.1 1c9eb7a03796990cdc7266663f8330e27635dfc33904221d67ff1a8e21f1fbc3 rename -
+      _swap jline-native org/jline 4.2.1 4.3.1 ff94ab4bccc3c1549444082ce07a2760cbf1ad4dae04e43508597bd802bcb231 rename -
+      _swap jline-reader org/jline 4.2.1 4.3.1 02aa899906086ce9d9c992bb05aed776045e5915a180e717dcb661fb87ab84d3 rename -
+      _swap jline-remote-ssh org/jline 4.2.1 4.3.1 1964a098c6c401015e686623dad7afa4a457ab5d0b5642f984afa50f228d3d79 rename -
+      _swap jline-remote-telnet org/jline 4.2.1 4.3.1 f1a9e044a103b8e1fbda27c4958220a028d7684f8717fb93f18d5726bf2be0b1 rename -
+      _swap jline-shell org/jline 4.2.1 4.3.1 ce72054bd9a874dd667562d018a4fb26df27cc2a7f896b0fd92a548b69b0ece8 rename -
+      _swap jline-style org/jline 4.2.1 4.3.1 ba1f741d7faca9b624ea3c0ed1bd3d22c4663cfcba5784fda6dc50a233778e0a rename -
+      _swap jline-terminal-ffm org/jline 4.2.1 4.3.1 2913cea48e5eac3e0763f5838059701b05c19d6dc41e829aee16a06364a340d6 rename -
+      _swap jline-terminal-jni org/jline 4.2.1 4.3.1 1c4873798f36412827087013e424199bced29da7c8421f3850cfe7f31f274c1c rename -
+      _swap jline-terminal org/jline 4.2.1 4.3.1 272927363471fdbf2f38710befbfe866acc1ed3472062a8ced02b16686f27bcc rename -
+      _swap jline org/jline 4.2.1 4.3.1 c75761d4625467083c208563718fc37551af2a3468271a0758726b1f7f728d75 rename -
+      _swap log4j-api org/apache/logging/log4j 2.25.4 2.25.5 64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863 rename -
+      _swap log4j-core org/apache/logging/log4j 2.25.4 2.25.5 050c4f85deb48b055e9c041ac39043fbb79ce477841a11a1eb2969c86c6a0072 rename -
+      _swap log4j-layout-template-json org/apache/logging/log4j 2.25.4 2.25.5 27c37313e20c16bf0178e38d9d1a5c7320e34c03aa35bc2c66a589ea14abf545 rename -
+      _swap log4j-slf4j2-impl org/apache/logging/log4j 2.25.4 2.25.5 8cab16dd6fc4c8f14c1c473022cb217512f2bbb2d59a70f8ec90a268d64d8831 rename -
+      _swap log4j-web org/apache/logging/log4j 2.25.4 2.25.5 9cf04225fab77a5d433dcad2ee62b8341cc0546d0e6941515bb9f8d5a199377c rename -
+      _swap lz4-java at/yawk/lz4 1.10.3 1.11.4 58c8e0b813960d2a248e050c353baea73139b48a2ffc55382d42c69707e17325 rename -
+      _swap netty-buffer io/netty 4.1.136.Final 4.1.137.Final f474b14c7734f15e0540394cb6f39d67777b7581a42919e4ac89d253d4efd929 rename -
+      _swap netty-codec-dns io/netty 4.1.136.Final 4.1.137.Final 2d9a33ce41bd9f6f607df95039e42518a1fca16f83c9bbfe72beb57df6e2489f rename -
+      _swap netty-codec-haproxy io/netty 4.1.136.Final 4.1.137.Final 5ffa58b94c5ac48fb7e41843c18acf7a268e90b5b85423987829c9291ce3a5df rename -
+      _swap netty-codec-http2 io/netty 4.1.136.Final 4.1.137.Final 576ddcfb51b78e86f145c9a52b60e500b1a1d5a257cafec8aa5416ffba044b49 rename -
+      _swap netty-codec-http io/netty 4.1.136.Final 4.1.137.Final 0535bb5a736472bef5c948d15eb273c4ab9f796656fc7c5d6b982ad92bddbd49 rename -
+      _swap netty-codec-socks io/netty 4.1.136.Final 4.1.137.Final 4a6190e08988c058bfeef2b5965e71946439c771abf721c68f4039b4e7b023e8 rename -
+      _swap netty-codec io/netty 4.1.136.Final 4.1.137.Final 9987b6a660b0a6b1f0d791485dae33180b3d1c63687c006fe6d3fd025e9e3798 rename -
+      _swap netty-common io/netty 4.1.136.Final 4.1.137.Final d31926b01adcc07af86f5e27b81b6d6c115df17d366e835d1fc3f5a1924e7e52 rename -
+      _swap netty-handler-proxy io/netty 4.1.136.Final 4.1.137.Final 843de10c4cef34cbc1a5344090f1b57db532fbebf141559862da675f6b656df4 rename -
+      _swap netty-handler io/netty 4.1.136.Final 4.1.137.Final d0e4c6ee4779f59f6ab2fb5d388e4f57147c82270164b37945764bb9bda96a44 rename -
+      _swap netty-resolver-dns-classes-macos io/netty 4.1.136.Final 4.1.137.Final 92d0a542954475f563ea58221d864884ba6753c50c1f17985b1045e990bf094c rename -
+      _swap netty-resolver-dns-native-macos io/netty 4.1.136.Final 4.1.137.Final 777e1e9f0337e04388e9f9bd9ff5270e607423be72306b381fd380418b06b9ac rename osx-aarch_64
+      _swap netty-resolver-dns-native-macos io/netty 4.1.136.Final 4.1.137.Final bc8a5616ab33f0e640bc6174eea770ccfca8ed0e9891ff3bb3ae638255bc006e rename osx-x86_64
+      _swap netty-resolver-dns-native-macos io/netty 4.1.136.Final 4.1.137.Final eb2cc7d70e13482b43d7ade6a32eed804d7d3d30251994ecbcdb6ba6fe0d6061 rename -
+      _swap netty-resolver-dns io/netty 4.1.136.Final 4.1.137.Final 898d63ca62ed68ff46543c5344f969424b417f1e8d082fe2bb0181ba10144194 rename -
+      _swap netty-resolver io/netty 4.1.136.Final 4.1.137.Final b4cf2aeedd9fc7c8c439bbfe574f63cfe5b83392e88bbc07ca0e8424b7cff955 rename -
+      _swap netty-transport-classes-epoll io/netty 4.1.136.Final 4.1.137.Final 55049554b799dc8e53bf234fffa36e001f7b5b65c32994b9bd59fc6356f1c52f rename -
+      _swap netty-transport-native-epoll io/netty 4.1.136.Final 4.1.137.Final 185db6053e0e9573d36fa4eb6567b26139afaa4daa7bf5a068e661568304542b rename linux-x86_64
+      _swap netty-transport-native-epoll io/netty 4.1.136.Final 4.1.137.Final 82fb63a2dc90c0bddb81e04065a1c06fb4c5be722ad5d64b46491daf8b6f9a01 rename linux-aarch_64
+      _swap netty-transport-native-epoll io/netty 4.1.136.Final 4.1.137.Final b2eb04dbb6ec6cc8fc00aed37bb86b7aed1ccb87722eda44c90652a7d41fbdfe rename -
+      _swap netty-transport-native-unix-common io/netty 4.1.136.Final 4.1.137.Final 8056e7637f9948f953314894cf995ab664711b66c73c4cd5b593ae84f0b1048c rename -
+      _swap netty-transport io/netty 4.1.136.Final 4.1.137.Final 6251adc2a2921572382732a2db188d4f4f2251fd6ebb49c5d44bbf33d6bfb1a7 rename -
+      _strag=/tmp/_bj_stragglers; : > "$_strag"
+      find "${{targets.destdir}}/opt/pulsar" \( -name "async*-2.15.*.jar" -o -name "async*-2.15.jar" \) ! -name "*-2.16.1.jar" ! -name "*-2.16.1-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "bcprov*-1.84.*.jar" -o -name "bcprov*-1.84.jar" \) ! -name "*-1.85.jar" ! -name "*-1.85-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "jackson*-2.18.*.jar" -o -name "jackson*-2.18.jar" \) ! -name "*-2.18.11.jar" ! -name "*-2.18.11-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "jline*-4.2.*.jar" -o -name "jline*-4.2.jar" \) ! -name "*-4.3.1.jar" ! -name "*-4.3.1-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "log4j*-2.25.*.jar" -o -name "log4j*-2.25.jar" \) ! -name "*-2.25.5.jar" ! -name "*-2.25.5-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "lz4*-1.10.*.jar" -o -name "lz4*-1.10.jar" \) ! -name "*-1.11.4.jar" ! -name "*-1.11.4-*.jar" >> "$_strag" 2>/dev/null || true
+      find "${{targets.destdir}}/opt/pulsar" \( -name "netty*-4.1.*.jar" -o -name "netty*-4.1.jar" \) ! -name "*-4.1.137.Final.jar" ! -name "*-4.1.137.Final-*.jar" >> "$_strag" 2>/dev/null || true
+      if [ -s "$_strag" ]; then
+        echo "patch-bundled-jars: jars left on a superseded version:" >&2
+        sort -u "$_strag" >&2
+        rm -f "$_strag"; exit 1
+      fi
+      rm -f "$_strag"
+  # end-patch-bundled-jars
+update:
+  enabled: true
+  github:
+    identifier: apache/pulsar
+    use-tag: true
+    tag-filter: "v4."
+    strip-prefix: "v"

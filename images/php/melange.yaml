@@ -1,0 +1,110 @@
+# Melange build configuration for minimal PHP
+# Builds PHP from source (php.net) - minimal CLI with openssl, libxml, curl, zlib
+# You control version and security patches; no dependency on Wolfi's php-8.5 package
+
+package:
+  # Named `php` (not `php-minimal`) so vulnerability scanners can identify it.
+  # Syft derives a package's CPE from its apk name, so the `-minimal` suffix
+  # produced cpe:2.3:a:php-minimal:php-minimal:* — which matches nothing in NVD
+  # (indexed as cpe:2.3:a:php:php:*) and nothing in the Wolfi secdb either, so
+  # both of grype's matchers missed every CVE for this package.
+  name: php
+  version: 8.5.11
+  epoch: 0
+  description: "Minimal PHP CLI built from source"
+  copyright:
+    - license: PHP-3.01
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `php` package today, but if it ever adds one at a higher version,
+    # apk would silently install Wolfi's build instead of this source-built
+    # one. provider-priority is evaluated BEFORE version in that comparator, so
+    # this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 from https://www.php.net/releases/?json&version=8.5
+  sha256: 338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - libxml2-dev
+      - openssl-dev
+      - zlib-dev
+      - curl-dev
+      - oniguruma-dev
+      - pkgconf
+
+pipeline:
+  # Download and verify PHP source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://www.php.net/distributions/php-${{package.version}}.tar.gz" \
+        -o /home/build/php.tar.gz
+      echo "${{vars.sha256}}  /home/build/php.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf php.tar.gz
+      rm php.tar.gz
+
+  # Work around openssl-hardened-dev's restricted API surface.
+  # Wolfi's openssl-hardened-dev defines OPENSSL_NO_DEPRECATED and sets
+  # OPENSSL_CONFIGURED_API to 30600, which hides ERR_NUM_ERRORS (deprecated
+  # in 3.0), RSA_PKCS1_PADDING, and other symbols PHP's openssl ext needs.
+  # We strip OPENSSL_NO_DEPRECATED and compile with OPENSSL_API_COMPAT=10000
+  # to request the full pre-3.0 API surface while staying within the
+  # OPENSSL_CONFIGURED_API constraint.
+  - runs: |
+      sed -i 's/^#\s*define\s\+OPENSSL_NO_DEPRECATED$//' /usr/include/openssl/configuration.h
+
+  # Configure and build PHP (minimal CLI only)
+  - runs: |
+      cd /home/build/php-${{package.version}}
+      CFLAGS="$CFLAGS -DOPENSSL_API_COMPAT=10000" \
+      ./configure \
+        --prefix=/usr \
+        --disable-all \
+        --enable-cli \
+        --with-openssl \
+        --with-zlib \
+        --enable-libxml \
+        --with-libxml \
+        --with-curl \
+        --enable-mbstring \
+        --enable-opcache \
+        --without-sqlite3 \
+        --without-pdo-sqlite
+      make -j$(nproc)
+
+  # Install to destdir (manual copy like Redis)
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+
+      cp /home/build/php-${{package.version}}/sapi/cli/php "${{targets.destdir}}/usr/bin/php"
+      cp /home/build/php-${{package.version}}/sapi/cgi/php-cgi "${{targets.destdir}}/usr/bin/php-cgi"
+
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/php"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/php-cgi"
+
+      echo "Verifying PHP build..."
+      ls -lh "${{targets.destdir}}/usr/bin/php"
+      ls -lh "${{targets.destdir}}/usr/bin/php-cgi"
+
+update:
+  enabled: true
+  github:
+    identifier: php/php-src
+    use-tag: true
+    tag-filter: "php-8.5."

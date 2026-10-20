@@ -1,0 +1,204 @@
+# Melange build configuration for minimal Apache Kafka
+# Downloads official Apache binary release + creates custom JRE with jlink
+# KRaft mode only (no ZooKeeper) - Kafka 4.x+
+
+package:
+  # Named `kafka` (not `kafka-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, and every CPE it
+  # generated kept -minimal in the product field
+  # (cpe:2.3:a:kafka:kafka-minimal:*, cpe:2.3:a:kafka-minimal:kafka-minimal:*,
+  # ...). NVD indexes this product bare, as cpe:2.3:a:kafka:kafka:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: kafka
+  version: 4.4.0
+  epoch: 0
+  description: "Minimal Apache Kafka with custom JRE (jlink), KRaft mode"
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `kafka` package today, but if it ever adds one at a higher version,
+    # apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA512 of kafka_2.13-{version}.tgz - updated by update-versions.yml workflow
+  sha512: f5ceba8a265ab6bb2d68362b1f6859a95e15d60ef92ba83b43fdf065b557dc18e98d6383c15b9977320e25b3a2c8b6f11decb17b0fa6c0f163423793a0eb95cb
+  scala_version: "2.13"
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      # Full JDK needed for jlink (build-time only)
+      - openjdk-21-default-jdk
+      - openjdk-21-jmods
+      # binutils provides objcopy required by jlink --strip-debug
+      - binutils
+
+pipeline:
+  # Download and verify Kafka binary release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://dlcdn.apache.org/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
+        -o /home/build/kafka.tgz || \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://downloads.apache.org/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
+        -o /home/build/kafka.tgz || \
+      curl -fsSL --connect-timeout 30 --retry 8 --retry-all-errors \
+        "https://archive.apache.org/dist/kafka/${{package.version}}/kafka_${{vars.scala_version}}-${{package.version}}.tgz" \
+        -o /home/build/kafka.tgz
+
+      echo "${{vars.sha512}}  /home/build/kafka.tgz" | sha512sum -c -
+
+      cd /home/build
+      tar xzf kafka.tgz
+      rm kafka.tgz
+
+  # Patch vulnerable JARs with fixed versions from Maven Central
+  # patch-kafka-jars: auto-generated — do not edit manually
+  - runs: |
+      LIBS="/home/build/kafka_${{vars.scala_version}}-${{package.version}}/libs"
+
+      # Remove vulnerable JARs. Use -f so a kafka version bump that
+      # drops or renames one of these doesn't fail the build — the
+      # download steps below will still place the patched version, and
+      # we'll notice the orphaned jar in the next dep audit.
+      rm -f "$LIBS/plexus-utils-3.5.1.jar"
+      rm -f "$LIBS/jetty-server-12.0.22.jar"
+      rm -f "$LIBS/jetty-http-12.0.22.jar"
+      rm -f "$LIBS/log4j-core-2.25.3.jar"
+      rm -f "$LIBS/log4j-1.2-api-2.25.3.jar"
+      rm -f "$LIBS/jackson-core-2.19.2.jar"
+
+      # Download patched versions and verify checksums
+      cd "$LIBS"
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/codehaus/plexus/plexus-utils/3.6.1/plexus-utils-3.6.1.jar" \
+        -o plexus-utils-3.6.1.jar
+      echo "05a63effd67e2d6b9d610cc82e2bd7473289d34802e57a529b28110f28af5679  plexus-utils-3.6.1.jar" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-server/12.0.32/jetty-server-12.0.32.jar" \
+        -o jetty-server-12.0.32.jar
+      echo "04b0d9f39543620bb1b1032bf8ff0f8095119d4e46213a1a3d6344fa0a07b728  jetty-server-12.0.32.jar" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-http/12.0.33/jetty-http-12.0.33.jar" \
+        -o jetty-http-12.0.33.jar
+      echo "325a8b5d5761d790d3c1db61c130e55f57d338ef644c89270d6b835ca52140a3  jetty-http-12.0.33.jar" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.25.4/log4j-core-2.25.4.jar" \
+        -o log4j-core-2.25.4.jar
+      echo "10fee2c0485d54fa44ee75d314f6295508f7b932281873db61a91b88073200e6  log4j-core-2.25.4.jar" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-1.2-api/2.25.4/log4j-1.2-api-2.25.4.jar" \
+        -o log4j-1.2-api-2.25.4.jar
+      echo "7b1a61507950ea67b3d6b11437ee37fad9db06f855c92c25c08aee074c757395  log4j-1.2-api-2.25.4.jar" | sha256sum -c -
+
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.21.1/jackson-core-2.21.1.jar" \
+        -o jackson-core-2.21.1.jar
+      echo "1edd5f2e49dca5f8e4519957c24b7b3050bd1c7ee883920da33cff031ff1f7c0  jackson-core-2.21.1.jar" | sha256sum -c -
+
+      echo "All vulnerable JARs patched and verified"
+  # end-patch-kafka-jars
+
+  # Create minimal JRE with jlink (only modules Kafka needs)
+  - runs: |
+      JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      $JAVA_HOME/bin/jlink \
+        --module-path $JAVA_HOME/jmods \
+        --add-modules java.base,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=zip-6 \
+        --output /home/build/custom-jre
+
+  # Install to destdir
+  - runs: |
+      KAFKA_SRC="/home/build/kafka_${{vars.scala_version}}-${{package.version}}"
+
+      # Install custom JRE
+      mkdir -p "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+      cp -a /home/build/custom-jre/* "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf ../lib/jvm/java-21-minimal/bin/java "${{targets.destdir}}/usr/bin/java"
+
+      # Install Kafka JARs (everything in libs/)
+      mkdir -p "${{targets.destdir}}/opt/kafka/libs"
+      cp "$KAFKA_SRC"/libs/*.jar "${{targets.destdir}}/opt/kafka/libs/"
+
+      # Install KRaft server config with correct data directory
+      # In Kafka 4.x, config/kraft/ subdirectory is gone - KRaft is the only mode
+      mkdir -p "${{targets.destdir}}/opt/kafka/config"
+      cp "$KAFKA_SRC/config/server.properties" "${{targets.destdir}}/opt/kafka/config/"
+      sed -i "s|log.dirs=.*|log.dirs=/var/kafka/data|" "${{targets.destdir}}/opt/kafka/config/server.properties"
+
+      # Install log4j2 config (Kafka 4.x migrated from Log4j 1 to Log4j 2)
+      cp "$KAFKA_SRC/config/log4j2.yaml" "${{targets.destdir}}/opt/kafka/config/"
+
+      # Install entrypoint: initialises KRaft storage on first boot then starts broker
+      cat > "${{targets.destdir}}/usr/bin/kafka-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+
+      KAFKA_DATA=${KAFKA_DATA:-/var/kafka/data}
+      KAFKA_CONFIG=${KAFKA_CONFIG:-/opt/kafka/config/server.properties}
+      CLASSPATH="/opt/kafka/libs/*"
+      JAVA=/usr/bin/java
+
+      # Format KRaft storage on first boot
+      if [ ! -f "$KAFKA_DATA/meta.properties" ]; then
+        echo "Initializing Kafka KRaft storage..."
+        CLUSTER_ID=$($JAVA -cp "$CLASSPATH" kafka.tools.StorageTool random-uuid)
+        $JAVA -cp "$CLASSPATH" kafka.tools.StorageTool format \
+          --config "$KAFKA_CONFIG" \
+          --cluster-id "$CLUSTER_ID" \
+          --standalone
+        echo "Storage initialized (cluster ID: $CLUSTER_ID)"
+      fi
+
+      exec $JAVA \
+        ${KAFKA_HEAP_OPTS:--Xmx1G -Xms256M} \
+        -Dlog4j.configurationFile=file:/opt/kafka/config/log4j2.yaml \
+        -Dkafka.logs.dir=/var/log/kafka \
+        -cp "$CLASSPATH" \
+        kafka.Kafka "$KAFKA_CONFIG" "$@"
+      ENTRY
+      chmod +x "${{targets.destdir}}/usr/bin/kafka-entrypoint.sh"
+
+      # Strip native libraries in JRE to reduce size
+      find "${{targets.destdir}}/usr/lib/jvm/java-21-minimal" -name '*.so' \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+  # Verify
+  - runs: |
+      echo "Verifying JRE..."
+      "${{targets.destdir}}/usr/lib/jvm/java-21-minimal/bin/java" -version
+      echo "Checking Kafka JARs..."
+      ls "${{targets.destdir}}/opt/kafka/libs/" | wc -l
+      echo "Checking JRE size..."
+      du -sh "${{targets.destdir}}/usr/lib/jvm/java-21-minimal"
+
+update:
+  enabled: true
+  github:
+    identifier: apache/kafka
+    use-tag: true
+    tag-filter: "4."

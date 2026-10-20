@@ -1,0 +1,130 @@
+# Melange build configuration for minimal Rails
+# Builds Ruby from source + installs Rails gem
+# You control version and security patches; no dependency on Wolfi's ruby package
+
+package:
+  # Named `rails` (not `rails-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, and every CPE it
+  # generated kept -minimal in the product field
+  # (cpe:2.3:a:rails:rails-minimal:*, cpe:2.3:a:rails-minimal:rails-minimal:*,
+  # ...). NVD indexes this product bare, as cpe:2.3:a:rails:rails:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: rails
+  version: 4.0.7
+  epoch: 0
+  description: "Minimal Ruby + Rails built from source"
+  copyright:
+    - license: Ruby AND MIT
+  options:
+    no-depends: true
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `rails` package today, but if it ever adds one at a higher version,
+    # apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  ruby_version: 4.0.7
+  rails_version: 8.1.4
+  # SHA256 from https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.1.tar.gz
+  sha256: 911ace20f90d068ca0e4dda6d0e4f0f81e52e52f2dd4f4004c721e253412e82d
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - zlib-dev
+      - yaml-dev
+      - libffi-dev
+      - readline-dev
+      - gdbm-dev
+
+pipeline:
+  # Download and verify Ruby source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-${{vars.ruby_version}}.tar.gz" \
+        -o /home/build/ruby.tar.gz
+      echo "${{vars.sha256}}  /home/build/ruby.tar.gz" | sha256sum -c -
+      cd /home/build
+      tar xzf ruby.tar.gz
+      rm ruby.tar.gz
+
+  # Configure and build Ruby
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      ./configure \
+        --prefix=/usr \
+        --disable-install-doc \
+        --disable-install-rdoc \
+        --with-openssl-dir=/usr \
+        --with-readline-dir=/usr \
+        --enable-shared \
+        --disable-jit-support
+      make -j$(nproc)
+
+  # Install Ruby to system (so shared libs are findable for gem install)
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install
+
+      ruby -v
+      echo "✓ Ruby installed to system"
+
+  # Install Rails and Bundler gems (using system Ruby)
+
+
+  # patch-bundler-deps: auto-generated — do not edit manually
+  - runs: |
+      cd /home/build
+      gem install json -v 2.19.2 --no-document
+  # end-patch-bundler-deps
+  - runs: |
+      gem install --no-document rails:${{vars.rails_version}} bundler
+
+      rails --version
+      bundler --version
+      echo "✓ Gems installed"
+
+  # Copy everything to destdir for packaging
+  - runs: |
+      cd /home/build/ruby-${{vars.ruby_version}}
+      make install DESTDIR="${{targets.destdir}}"
+
+      # Copy installed gems to destdir
+      cp -a /usr/lib/ruby/gems "${{targets.destdir}}/usr/lib/ruby/"
+
+      # Copy gem bin wrappers
+      for cmd in rails bundler bundle rake; do
+        if [ -f /usr/bin/$cmd ]; then
+          cp /usr/bin/$cmd "${{targets.destdir}}/usr/bin/$cmd"
+        fi
+      done
+
+      # Strip binaries
+      find "${{targets.destdir}}/usr" -type f -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/ruby" 2>/dev/null || true
+
+      echo "Verifying Ruby build..."
+      ls -lh "${{targets.destdir}}/usr/bin/ruby"
+
+update:
+  enabled: true
+  github:
+    identifier: ruby/ruby
+    use-tag: true
+    tag-filter: "v4_0_"

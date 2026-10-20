@@ -1,0 +1,381 @@
+---
+import Layout from '../../components/Layout.astro';
+import CopyButton from '../../components/CopyButton.astro';
+import SeverityBar from '../../components/SeverityBar.astro';
+import { images, getImage, categorySlug, imageTitle, imageHref } from '../../lib/catalog';
+
+export function getStaticPaths() {
+  // Addressed by `slug`, not `name`: three images publish as minimal-<x>-slim but
+  // must live at /images/<x>/ to match what people search. See lib/catalog.ts.
+  return images.map((img) => ({ params: { name: img.slug }, props: { image: img } }));
+}
+
+const { image } = Astro.props;
+const v = image.vulnerabilities;
+const variantKeys = Object.keys(image.variants);
+const hasDev = variantKeys.includes('dev');
+const prod = image.variants.prod || image.variants[variantKeys[0]];
+
+// severity pill counts
+const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
+
+// SEO title/description.
+//
+// "<name> — Minimal Containers" matched no query anyone types; the searches that
+// exist are "hardened <name> container image" and "distroless <name>". The brand
+// moves to og:site_name instead of occupying the front of every title.
+//
+// catalog.json now carries a distinct per-image `description` (140-160 chars),
+// required by scripts/check-catalog-descriptions.sh. Prefer it.
+//
+// The composed fallback below stays for resilience only: `summary` is 23-77
+// chars and near-identical in shape across the catalogue ("Shell-less X built
+// on Wolfi."), which reads as duplicate boilerplate at meta-description length,
+// so it is padded with the facts that differ per image. The gate means this
+// path should not be reached in a normal build.
+const pageTitle = imageTitle(image);
+const pullRef = prod?.pullRef ?? `ghcr.io/rtvkiz/minimal-${image.name}`;
+const pageDescription =
+  image.description?.trim() ||
+  [
+    image.summary,
+    `Signed, SBOM-attested${image.size ? `, ${image.size.human} compressed` : ''}, rebuilt daily.`,
+    `Free and public — pull ${pullRef.split(':')[0]} with no account.`,
+  ].join(' ');
+
+const siblings = images
+  .filter((i) => i.category === image.category && i.name !== image.name)
+  .slice(0, 8);
+
+// SoftwareApplication is the closest schema.org type for a distributable
+// container image: it carries the free-of-charge offer, the operating system
+// and the download reference, which is what a rich result needs.
+const schema = [{
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: `minimal-${image.name}`,
+  applicationCategory: 'DeveloperApplication',
+  description: image.summary,
+  operatingSystem: 'Linux',
+  url: new URL(`/images/${image.slug}`, Astro.site).href,
+  downloadUrl: `https://${pullRef.split(':')[0]}`,
+  softwareHelp: new URL('/docs', Astro.site).href,
+  license: 'https://spdx.org/licenses/MIT.html',
+  isAccessibleForFree: true,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  ...(prod?.specs?.archs?.length ? { processorRequirements: prod.specs.archs.join(', ') } : {}),
+  ...(image.builtAt ? { dateModified: image.builtAt } : {}),
+  maintainer: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+}];
+---
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  schema={schema}
+  breadcrumbs={[{ name: 'Images', href: '/images/' }, { name: image.category, href: '/images/' }]}>
+  <div class="detail-head">
+    <div class="container">
+      <p style="margin:0 0 6px"><a href="/images/" class="small muted">← All images</a></p>
+      <h1>
+        {image.displayName}
+        <a class="cat" href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a>
+      </h1>
+      <p class="summary">{image.summary}</p>
+      <div class="quickfacts">
+        {image.size && <span><b>Size</b> {image.size.human}</span>}
+        {prod?.specs?.archs?.length ? <span><b>Arch</b> {prod.specs.archs.join(', ')}</span> : null}
+        {prod?.specs?.uid != null && <span><b>User</b> {prod.specs.user}</span>}
+        {image.updatedAgo && <span><b>Updated</b> {image.updatedAgo}</span>}
+        {/* The registry name outlives the page name: these three publish as
+            minimal-<x>-slim, so say so rather than let the pull ref surprise. */}
+        {image.slug !== image.name && <span><b>Publishes as</b> <code class="kv-mono">minimal-{image.name}</code></span>}
+        {image.upstreamUrl && <span><b>Upstream</b> <a href={image.upstreamUrl} rel="noopener">{image.upstreamUrl.replace(/^https?:\/\//, '')}</a></span>}
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="overview">Overview</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="specs">Specifications</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tags">Tags <span class="muted">({image.tags.length})</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="packages">Packages{image.packages ? <span class="muted"> ({image.packages.length})</span> : null}</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="advisories">Advisories{v ? <span class="muted"> ({v.total})</span> : null}</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="provenance">Provenance</button>
+    </div>
+
+    {hasDev && (
+      <div class="variant-toggle" id="variant-toggle" style="margin-top:20px">
+        <button data-variant="prod" aria-pressed="true">Production</button>
+        <button data-variant="dev" aria-pressed="false">Dev</button>
+      </div>
+    )}
+
+    <!-- OVERVIEW -->
+    <div class="tabpanel" data-panel="overview">
+      <h2 class="section-title" style="font-size:1.1rem">Pull this image</h2>
+      {variantKeys.map((vk) => (
+        <div class="variant-block" data-variant={vk} hidden={vk !== 'prod'}>
+          <CopyButton code={`docker pull ${image.variants[vk].pullRef}`} />
+          {vk === 'dev' && <p class="small muted" style="margin-top:8px">The <code>-dev</code> variant adds a shell, package manager and build toolchain. For CI and debugging — not production.</p>}
+        </div>
+      ))}
+
+      <h2 class="section-title" style="font-size:1.1rem;margin-top:28px">Details</h2>
+      <dl class="spec-grid">
+        <dt>Repository</dt><dd class="kv-mono">{image.repo}</dd>
+        {image.digest && <><dt>Digest</dt><dd class="kv-mono">{image.digest}</dd></>}
+        {image.size && <><dt>Size (compressed)</dt><dd>{image.size.human}</dd></>}
+        {image.builtAt && <><dt>Built</dt><dd>{image.builtAt} {image.updatedAgo ? `(${image.updatedAgo})` : ''}</dd></>}
+        {prod?.specs?.archs?.length ? <><dt>Architectures</dt><dd>{prod.specs.archs.join(', ')}</dd></> : null}
+        {image.primaryPackage && <><dt>Primary package</dt><dd class="kv-mono">{image.primaryPackage}</dd></>}
+      </dl>
+      {image.degraded && (
+        <p class="notice warn" style="margin-top:20px">Some data was unavailable for this build: {image.notes.join('; ') || 'partial'}.</p>
+      )}
+    </div>
+
+    <!-- SPECIFICATIONS -->
+    <div class="tabpanel" data-panel="specs">
+      {variantKeys.map((vk) => {
+        const s = image.variants[vk].specs;
+        return (
+          <div class="variant-block" data-variant={vk} hidden={vk !== 'prod'}>
+            {s ? (
+              <dl class="spec-grid">
+                <dt>Entrypoint</dt><dd class="kv-mono">{s.entrypoint || '—'}</dd>
+                {s.cmd && <><dt>Cmd</dt><dd class="kv-mono">{s.cmd}</dd></>}
+                <dt>User</dt><dd>{s.user || 'root'}</dd>
+                <dt>Working dir</dt><dd class="kv-mono">{s.workdir || '/'}</dd>
+                <dt>Architectures</dt><dd>{s.archs.join(', ') || '—'}</dd>
+                {s.exposedPorts && s.exposedPorts.length > 0 && <><dt>Exposed ports</dt><dd class="kv-mono">{s.exposedPorts.join(', ')}</dd></>}
+                {s.volumes && s.volumes.length > 0 && <><dt>Volumes</dt><dd class="kv-mono">{s.volumes.join(', ')}</dd></>}
+                <dt>Environment</dt>
+                <dd>
+                  {Object.keys(s.env).length === 0 ? '—' : (
+                    <div class="tag-list">
+                      {Object.entries(s.env).map(([k, val]) => <span class="tag-chip">{k}={val}</span>)}
+                    </div>
+                  )}
+                </dd>
+                <dt>Labels</dt>
+                <dd>
+                  {Object.keys(s.labels).length === 0 ? '—' : (
+                    <table class="data"><tbody>
+                      {Object.entries(s.labels).map(([k, val]) => <tr><td class="mono">{k}</td><td>{val}</td></tr>)}
+                    </tbody></table>
+                  )}
+                </dd>
+              </dl>
+            ) : (
+              <p class="notice warn">Specifications unavailable for the {vk} variant.</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- TAGS -->
+    <div class="tabpanel" data-panel="tags">
+      {image.tagsStatus === 'none' || image.tags.length === 0 ? (
+        <p class="notice warn">Tag list unavailable{image.tagsStatus === 'partial' ? ' (registry temporarily unavailable)' : ''}. Pull <code class="kv-mono">{image.repo}:latest</code>.</p>
+      ) : (
+        <>
+          {image.tagsStatus === 'partial' && <p class="notice warn" style="margin-bottom:16px">Showing a partial tag list — the registry returned incomplete data for this build.</p>}
+          <table class="data">
+            <thead><tr><th>Tag</th><th>Pull</th>{image.tags.some((t) => t.created) && <th>Published</th>}</tr></thead>
+            <tbody>
+              {image.tags.map((t) => (
+                <tr>
+                  <td class="mono">{t.name}</td>
+                  <td class="mono">{image.repo}:{t.name}</td>
+                  {image.tags.some((x) => x.created) && <td class="small muted">{t.created ? new Date(t.created).toISOString().slice(0, 10) : '—'}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+
+    <!-- PACKAGES -->
+    <div class="tabpanel" data-panel="packages">
+      {image.packages ? (
+        <>
+          <p class="section-sub">{image.packages.length} packages in the image, resolved from the SPDX SBOM.</p>
+          <table class="data">
+            <thead><tr><th>Package</th><th>Version</th><th>License</th></tr></thead>
+            <tbody>
+              {image.packages.map((p) => (
+                <tr><td>{p.name}</td><td class="mono">{p.version || '—'}</td><td>{p.license || '—'}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : (
+        <>
+          <p class="notice" style="margin-bottom:20px">The resolved SBOM isn't available for this build yet — showing the packages requested in the apko build recipe (without resolved versions). The full SBOM appears after the next scheduled build.</p>
+          {variantKeys.map((vk) => {
+            const reqs = image.variants[vk].specs?.packagesRequested || [];
+            return (
+              <div class="variant-block" data-variant={vk} hidden={vk !== 'prod'}>
+                {reqs.length ? (
+                  <div class="tag-list">{reqs.map((p) => <span class="tag-chip">{p}</span>)}</div>
+                ) : (
+                  <p class="notice warn">No package list available for the {vk} variant.</p>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+
+    <!-- ADVISORIES -->
+    <div class="tabpanel" data-panel="advisories">
+      {v ? (
+        v.total === 0 ? (
+          <>
+            <p class="notice"><span class="pill clean">Clean</span> &nbsp; No known vulnerabilities in the latest scan.</p>
+            {(v.excluded ?? 0) > 0 && (
+              <p class="small muted">
+                {v.excluded} advisor{v.excluded === 1 ? 'y was' : 'ies were'} withheld: they match this
+                image&rsquo;s package <em>name</em> in the distro feed, not anything in the image.
+                <a href="/docs/vulnerabilities/#provenance"> Why</a>.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+              {sevOrder.map((s) => v.counts[s] > 0 && <span class={`pill ${s}`}>{v.counts[s]} {s}</span>)}
+              <span class="pill neutral">{v.fixable} fixable</span>
+              {v.vex.statements > 0 && <span class="pill neutral">{v.vex.statements} VEX</span>}
+              {(v.excluded ?? 0) > 0 && (
+                <span class="pill neutral" title="Matched this image's package name in the distro advisory feed, with nothing corresponding in the image contents">
+                  {v.excluded} withheld
+                </span>
+              )}
+              {(v.needsReview?.length ?? 0) > 0 && (
+                <span class="pill medium" title="The distro records a fix in a newer upstream version — we may be behind, or upstream may have been forked">
+                  {v.needsReview!.length} need review
+                </span>
+              )}
+            </div>
+            <table class="data">
+              <thead><tr><th>CVE</th><th>Severity</th><th>Package</th><th>Installed</th><th>Fixed in</th></tr></thead>
+              <tbody>
+                {v.list.map((cve) => (
+                  <tr>
+                    <td class="mono">{cve.url ? <a href={cve.url} rel="noopener">{cve.id}</a> : cve.id}</td>
+                    <td><span class={`pill ${cve.severity.toLowerCase()}`}>{cve.severity}</span></td>
+                    <td>{cve.package}</td>
+                    <td class="mono">{cve.installed}</td>
+                    <td class="mono">{cve.fixedIn || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )
+      ) : (
+        <p class="notice">No scan data for this build. Advisories appear after the next scheduled CVE scan.</p>
+      )}
+    </div>
+
+    <!-- PROVENANCE -->
+    <div class="tabpanel" data-panel="provenance">
+      <p class="section-sub">Everything is verifiable without an account. Copy and run:</p>
+      <h3 style="font-size:1rem;margin:20px 0 8px">Build provenance (SLSA v1.0, Build L2)</h3>
+      <CopyButton code={`gh attestation verify oci://${image.repo}:latest --owner rtvkiz`} />
+      <h3 style="font-size:1rem;margin:24px 0 8px">Cosign signature</h3>
+      <CopyButton code={`cosign verify \\
+  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \\
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\
+  ${image.repo}:latest`} />
+      <h3 style="font-size:1rem;margin:24px 0 8px">SBOM attestation (SPDX)</h3>
+      <CopyButton code={`cosign verify-attestation --type spdxjson \\
+  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \\
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\
+  ${image.repo}:latest \\
+  | jq -r '.payload | @base64d | fromjson | .predicate'`} />
+      <p class="small muted" style="margin-top:20px">Signatures are logged in the public <a href="https://rekor.sigstore.dev" rel="noopener">Rekor</a> transparency log.</p>
+    </div>
+    <!-- Cross-links. Before this, the 108 leaf pages linked only upward to
+         /images: no sibling links, and nothing pointing at /compare or /blog,
+         which left the comparison pages reachable only from the nav. -->
+    <div style="margin-top:48px;padding-top:28px;border-top:1px solid var(--border)">
+      {siblings.length > 0 && (
+        <>
+          <h2 class="section-title" style="font-size:1.05rem">
+            More <a href={`/images/category/${categorySlug(image.category)}/`}>{image.category}</a> images
+          </h2>
+          <div class="facets" style="margin-top:12px">
+            {siblings.map((s) => <a class="facet" href={imageHref(s.name)}>{s.displayName}</a>)}
+          </div>
+        </>
+      )}
+      <p class="small muted" style="margin-top:22px">
+        Weighing this against another provider? The
+        <a href="/compare/">comparison pages</a> publish head-to-head scan data with the raw
+        dataset, including the images where Minimal comes off worse — or read the
+        <a href="/blog/migrating-from-minimus-to-minimal/">migration guide</a> for what actually
+        breaks when you switch.
+      </p>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Collapse the panels as early as possible. This runs during parse, before
+    // first paint, so JS users see the normal tab UI with no flash of the full
+    // document. It is deliberately NOT a `hidden` attribute in the markup:
+    // crawlers that do not execute JS — which most AI/LLM crawlers do not —
+    // would then only ever receive the Overview panel. On nginx that was 212 of
+    // the page's 458 words; the rest was delivered as display:none.
+    (function () {
+      var panels = document.querySelectorAll('.tabpanel');
+      var initial = location.hash.replace('#', '') || 'overview';
+      var known = false;
+      for (var i = 0; i < panels.length; i++) {
+        if (panels[i].getAttribute('data-panel') === initial) known = true;
+      }
+      if (!known) initial = 'overview';
+      for (var j = 0; j < panels.length; j++) {
+        panels[j].hidden = panels[j].getAttribute('data-panel') !== initial;
+      }
+      var tabs = document.querySelectorAll('.tab');
+      for (var k = 0; k < tabs.length; k++) {
+        tabs[k].setAttribute('aria-selected', String(tabs[k].getAttribute('data-tab') === initial));
+      }
+    })();
+  </script>
+</Layout>
+
+<script>
+  // Tabs
+  const tabs = Array.from(document.querySelectorAll<HTMLElement>('.tab'));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('.tabpanel'));
+  function selectTab(name: string) {
+    for (const t of tabs) t.setAttribute('aria-selected', String(t.dataset.tab === name));
+    for (const p of panels) p.hidden = p.dataset.panel !== name;
+    history.replaceState(null, '', `#${name}`);
+  }
+  for (const t of tabs) t.addEventListener('click', () => selectTab(t.dataset.tab!));
+  const initial = location.hash.replace('#', '');
+  if (initial && tabs.some((t) => t.dataset.tab === initial)) selectTab(initial);
+
+  // Variant toggle (prod/dev) — shows matching .variant-block across tabs
+  const vtoggle = document.getElementById('variant-toggle');
+  if (vtoggle) {
+    const vbtns = Array.from(vtoggle.querySelectorAll<HTMLElement>('button'));
+    for (const b of vbtns) {
+      b.addEventListener('click', () => {
+        const variant = b.dataset.variant!;
+        for (const other of vbtns) other.setAttribute('aria-pressed', String(other === b));
+        for (const block of Array.from(document.querySelectorAll<HTMLElement>('.variant-block'))) {
+          block.hidden = block.dataset.variant !== variant;
+        }
+      });
+    }
+  }
+</script>

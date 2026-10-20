@@ -1,0 +1,95 @@
+# Melange build configuration for minimal RabbitMQ
+# Downloads official generic-unix binary release (pre-compiled BEAM files)
+# Runtime Erlang OTP is provided by Wolfi's erlang-27 package at image assembly time
+
+package:
+  # Named `rabbitmq` (not `rabbitmq-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:rabbitmq:rabbitmq-minimal:*,
+  # cpe:2.3:a:rabbitmq-minimal:rabbitmq-minimal:*, ...). NVD indexes this
+  # product bare, as cpe:2.3:a:rabbitmq:rabbitmq:*, so none of them matched,
+  # and the Wolfi secdb missed it too.
+  name: rabbitmq
+  version: 4.4.0
+  epoch: 0
+  description: "Minimal RabbitMQ message broker from official generic-unix release"
+  copyright:
+    - license: MPL-2.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `rabbitmq` package today, but if it ever adds one at a higher
+    # version, apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of rabbitmq-server-generic-unix-{version}.tar.xz - updated by update-versions.yml
+  sha256: 68c22d5dafa15c0911463aeca73c362d638cd6fb8e407ad39512959c6cc37f0f
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - xz
+
+pipeline:
+  # Download and verify RabbitMQ generic-unix release
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/rabbitmq/rabbitmq-server/releases/download/v${{package.version}}/rabbitmq-server-generic-unix-${{package.version}}.tar.xz" \
+        -o /home/build/rabbitmq.tar.xz
+
+      echo "${{vars.sha256}}  /home/build/rabbitmq.tar.xz" | sha256sum -c -
+
+      cd /home/build
+      tar xJf rabbitmq.tar.xz
+      rm rabbitmq.tar.xz
+
+  # Install to destdir
+  - runs: |
+      RMQ_SRC="/home/build/rabbitmq_server-${{package.version}}"
+
+      # Install RabbitMQ tree under /opt/rabbitmq
+      mkdir -p "${{targets.destdir}}/opt/rabbitmq"
+      cp -a "$RMQ_SRC/." "${{targets.destdir}}/opt/rabbitmq/"
+
+      # Convenience symlinks for CLI tools
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-server     "${{targets.destdir}}/usr/bin/rabbitmq-server"
+      ln -sf /opt/rabbitmq/sbin/rabbitmqctl          "${{targets.destdir}}/usr/bin/rabbitmqctl"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-diagnostics "${{targets.destdir}}/usr/bin/rabbitmq-diagnostics"
+      ln -sf /opt/rabbitmq/sbin/rabbitmq-plugins     "${{targets.destdir}}/usr/bin/rabbitmq-plugins"
+
+      # Stub config dir - actual config is mounted by the user or set via env vars
+      # (stdout logging is handled by RABBITMQ_LOGS=- in the apko image env)
+      mkdir -p "${{targets.destdir}}/etc/rabbitmq"
+
+  # Verify the release
+  - runs: |
+      echo "Verifying RabbitMQ release..."
+      test -f "${{targets.destdir}}/opt/rabbitmq/sbin/rabbitmq-server"
+      test -f "${{targets.destdir}}/opt/rabbitmq/sbin/rabbitmqctl"
+      echo "Plugin count:"
+      ls "${{targets.destdir}}/opt/rabbitmq/plugins/"*.ez 2>/dev/null | wc -l
+      echo "Version from sbin:"
+      grep -r "VERSION" "${{targets.destdir}}/opt/rabbitmq/sbin/rabbitmq-defaults" || true
+
+update:
+  enabled: true
+  github:
+    identifier: rabbitmq/rabbitmq-server
+    use-tag: true
+    tag-filter: "v4."
+    strip-prefix: "v"

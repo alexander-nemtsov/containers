@@ -1,0 +1,165 @@
+name: Build and publish images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Rebuild every 6 hours to keep images and vulnerability counts fresh
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+env:
+  REGISTRY: registry.nexaflow.by
+  OWNER: development
+  ARCH: x86_64,arm64
+  APK_REPOSITORY: https://packages.wolfi.dev/os
+  APK_KEYS: https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+
+jobs:
+  build:
+    runs-on: wolfi
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: java
+            version: "17"
+            config: images/jre/17/apko.yaml
+            tags: "17 17.0.20"
+            image: jre
+
+          - component: java
+            version: "21"
+            config: images/jre/21/apko.yaml
+            tags: "21 21.0.12"
+            image: jre
+
+          - component: java
+            version: "25"
+            config: images/jre/25/apko.yaml
+            tags: "25 25.0.4"
+            image: jre
+
+          - component: java
+            version: "26"
+            config: images/jre/26/apko.yaml
+            tags: "latest 26 26.0.2"
+            image: jre
+
+          - component: python3
+            version: "12"
+            config: images/python/3.12/apko.yaml
+            tags: "3.12 3.12.14"
+            image: python
+
+          - component: python3
+            version: "13"
+            config: images/python/3.13/apko.yaml
+            tags: "3.13 3.13.15"
+            image: python
+
+          - component: python3
+            version: "14"
+            config: images/python/3.14/apko.yaml
+            tags: "latest 3.14 3.14.7"
+            image: python
+
+          - component: postgres
+            version: "18"
+            config: images/postgres/18/apko.yaml
+            tags: "latest 18 18.6"
+            image: postgres
+
+    name: "${{ matrix.component }}-${{ matrix.version }}"
+
+    steps:
+      - name: Checkout repository
+        run: |
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+          COMMIT_SHA="${{ github.sha }}"
+
+          if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
+            git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@${{ github.server_url }}".insteadOf "https://${{ github.server_url }}"
+          fi
+
+          git init
+          git remote add origin "$REPO_URL"
+          
+          git fetch --depth 1 origin "$COMMIT_SHA"
+          git checkout FETCH_HEAD
+
+      - name: Install cosign
+        run: apk add cosign
+
+      - name: Login to registry
+        run: |
+          apko login "${REGISTRY}" \
+            -u "${{ secrets.REGISTRY_USER }}" \
+            -p "${{ secrets.REGISTRY_PASSWORD }}"
+
+      - name: Build tags list
+        id: tags
+        run: |
+          TAG_ARGS=""
+          
+          for tag in ${{ matrix.tags }}; do
+            TAG_ARGS="${TAG_ARGS} ${REGISTRY}/${OWNER}/${{ matrix.image }}:${tag}"
+          done
+          
+          # Последний тег — самый специфичный, используем его для подписи
+          LAST_TAG=$(echo "${{ matrix.tags }}" | awk '{print $NF}')
+          echo "args=${TAG_ARGS}" >> "$GITHUB_OUTPUT"
+          echo "primary=${REGISTRY}/${OWNER}/${{ matrix.image }}:${LAST_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish image
+        run: |
+          mkdir -p sbom-output
+          apko publish ${{ matrix.config }} \
+            ${{ steps.tags.outputs.args }} \
+            --arch="${ARCH}" \
+            --repository-append="${APK_REPOSITORY}" \
+            --keyring-append="${APK_KEYS}" \
+            --sbom-path ./sbom-output
+
+      - name: Setup signing key
+        run: |
+          printf '%s' "${{ secrets.COSIGN_KEY_BASE64 }}" | base64 -d > /tmp/cosign.key
+          chmod 600 /tmp/cosign.key
+
+      - name: Attach SBOM attestation
+        run: |
+          SBOM_FILE=$(find ./sbom-output -name '*.spdx.json' | head -1)
+          
+          if [ -z "$SBOM_FILE" ]; then
+            echo "::warning::SBOM file not found, skipping attestation"
+            exit 0
+          fi
+
+          cosign attest \
+            --predicate "$SBOM_FILE" \
+            --type spdxjson \
+            --key /tmp/cosign.key \
+            --yes \
+            "${{ steps.tags.outputs.primary }}"
+        env:
+          COSIGN_PASSWORD: ""
+
+
+      - name: Sign image
+        run: |
+          cosign sign \
+            --key /tmp/cosign.key \
+            --yes \
+            "${{ steps.tags.outputs.primary }}"
+        env:
+          COSIGN_PASSWORD: ""
+
+      # - name: Upload SBOM artifact
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: sbom-${{ matrix.component }}-${{ matrix.version }}
+      #     path: ./sbom-output/
+      #     retention-days: 30

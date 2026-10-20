@@ -1,0 +1,118 @@
+# Melange build configuration for minimal Redis
+# Builds Redis from source with only server + CLI
+# No modules, no Sentinel, minimal footprint
+
+package:
+  # Named `redis` (not `redis-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, so a `-minimal` suffix
+  # produced cpe:2.3:a:redis-minimal:redis-minimal:* — which matches nothing in
+  # NVD (indexed as cpe:2.3:a:redis:redis:*) and nothing in the Wolfi secdb
+  # either. Both of grype's matchers therefore missed every Redis CVE: a
+  # controlled test on haproxy showed 0 matches suffixed vs 14 unsuffixed at an
+  # identical version. Redis is a C app with no second identity (Go images get
+  # a go-module entry as a fallback; this one has only the apk name), so the
+  # suffix made it entirely unscannable.
+  name: redis
+  version: 8.10.2
+  epoch: 0
+  description: "Minimal Redis server and CLI built from source"
+  copyright:
+    - license: SSPL-1.0
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # `redis` package today, but if it ever adds one at a higher version, apk
+    # would silently install Wolfi's build instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently. Verified empirically: a local
+    # helm 3.21.3 with provider-priority beat Wolfi's helm-4 4.2.3; without it,
+    # Wolfi's won.
+    provider-priority: 100
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
+  sha256: 541a374b753a8405683dd88560465791acc98cf09445ef10ec1bd286904273e8
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      # Pinned, not bare `openssl-dev`: Wolfi now ships both an openssl-3.6
+      # track and a new openssl-4.0 preview, and the bare provider resolves to
+      # whichever is highest (same bare-toolchain-provider trap as go/nodejs/
+      # rust — see scripts/check-toolchain-pins.sh). Pinning to 3.6 keeps
+      # redis-server linked against so:libssl.so.3/libcrypto.so.3, matching
+      # the apko runtime's explicit libssl3/libcrypto3 — leaving it bare
+      # silently relinked against libssl.so.4 and left both OpenSSL majors
+      # installed in the runtime image (the 4.0 half pulled in automatically
+      # by apk's auto-provides, the 3.6 half still listed explicitly below).
+      - openssl-3.6-dev
+      - jemalloc-dev
+
+pipeline:
+  # Download and verify Redis source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/redis/redis/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/redis.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/redis.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf redis.tar.gz
+      rm redis.tar.gz
+
+  # Build Redis from source
+  - runs: |
+      cd /home/build/redis-${{package.version}}
+      # WARN override: redis's src/Makefile promotes deprecated-declarations
+      # to -Werror. Wolfi's openssl-dev tracks a 4.0 preview where
+      # X509_NAME_get_text_by_NID (used by tls.c) is newly deprecated, which
+      # turns a harmless upstream warning into a hard build failure. Drop just
+      # that one -Werror= promotion; keep every other warning redis enables.
+      make -j$(nproc) \
+        BUILD_TLS=yes \
+        USE_SYSTEMD=no \
+        MALLOC=jemalloc \
+        WARN="-Wall -W -Wno-missing-field-initializers -Wstrict-prototypes"
+      make install PREFIX=/home/build/redis-install
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/redis-install/bin/redis-server "${{targets.destdir}}/usr/bin/"
+      cp /home/build/redis-install/bin/redis-cli "${{targets.destdir}}/usr/bin/"
+
+      # Strip binaries
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/redis-server"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/redis-cli"
+
+      # Create data directory
+      mkdir -p "${{targets.destdir}}/data"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Redis build..."
+      "${{targets.destdir}}/usr/bin/redis-server" --version
+      "${{targets.destdir}}/usr/bin/redis-cli" --version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/redis-server"
+      ls -lh "${{targets.destdir}}/usr/bin/redis-cli"
+
+update:
+  enabled: true
+  github:
+    identifier: redis/redis
+    use-tag: true
+    tag-filter: "8."

@@ -1,0 +1,99 @@
+# Melange build configuration for minimal Valkey
+# Builds Valkey from source with TLS support
+# Valkey is the BSD-licensed Redis fork under the Linux Foundation
+# Minimal footprint - server + CLI only
+
+package:
+  # Named `valkey` (not `valkey-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:valkey:valkey-minimal:*,
+  # cpe:2.3:a:valkey-minimal:valkey-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:valkey:valkey:*, so none of them matched, and the Wolfi
+  # secdb missed it too.
+  name: valkey
+  version: 9.1.2
+  epoch: 0
+  description: "Minimal Valkey server and CLI built from source"
+  copyright:
+    - license: BSD-3-Clause
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `valkey`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
+  sha256: 19c23908e7d57e8d91ef85b41f5646307582f10f4f0fb999bbf89ed24ec9c983
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - linux-headers
+      - openssl-dev
+      - jemalloc-dev
+
+pipeline:
+  # Download and verify Valkey source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://github.com/valkey-io/valkey/archive/refs/tags/${{package.version}}.tar.gz" \
+        -o /home/build/valkey.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/valkey.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf valkey.tar.gz
+      rm valkey.tar.gz
+
+  # Build Valkey from source
+  - runs: |
+      cd /home/build/valkey-${{package.version}}
+      make -j$(nproc) \
+        BUILD_TLS=yes \
+        USE_SYSTEMD=no \
+        MALLOC=jemalloc
+      make install PREFIX=/home/build/valkey-install
+
+  # Install to destdir
+  - runs: |
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      cp /home/build/valkey-install/bin/valkey-server "${{targets.destdir}}/usr/bin/"
+      cp /home/build/valkey-install/bin/valkey-cli "${{targets.destdir}}/usr/bin/"
+
+      # Strip binaries
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/valkey-server"
+      strip --strip-unneeded "${{targets.destdir}}/usr/bin/valkey-cli"
+
+      # Create data directory
+      mkdir -p "${{targets.destdir}}/data"
+
+  # Verify the build
+  - runs: |
+      echo "Verifying Valkey build..."
+      "${{targets.destdir}}/usr/bin/valkey-server" --version
+      "${{targets.destdir}}/usr/bin/valkey-cli" --version
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/valkey-server"
+      ls -lh "${{targets.destdir}}/usr/bin/valkey-cli"
+
+update:
+  enabled: true
+  github:
+    identifier: valkey-io/valkey
+    use-tag: true
+    tag-filter: "9."

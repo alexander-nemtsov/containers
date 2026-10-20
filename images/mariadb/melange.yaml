@@ -1,0 +1,255 @@
+# Melange build configuration for minimal MariaDB
+# Builds MariaDB 11.4 LTS from source with cmake
+# LTS series, EOL 2029-05-29
+
+package:
+  # Named `mariadb` (not `mariadb-minimal`) so vulnerability scanners can
+  # identify it. Syft derives a package's CPE from its apk name, and every CPE
+  # it generated kept -minimal in the product field
+  # (cpe:2.3:a:mariadb:mariadb-minimal:*,
+  # cpe:2.3:a:mariadb-minimal:mariadb-minimal:*, ...). NVD indexes this product
+  # bare, as cpe:2.3:a:mariadb:mariadb:*, so none of them matched, and the
+  # Wolfi secdb missed it too.
+  name: mariadb
+  version: 11.4.13
+  epoch: 0
+  description: "Minimal MariaDB LTS server built from source"
+  copyright:
+    - license: GPL-2.0-only
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `mariadb`, so without this apk could install Wolfi's build instead
+    # of this source-built one. provider-priority is evaluated BEFORE version
+    # in that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
+  sha256: 1bb254b106d0a7ca871cfa18fa6e18d4b80a7430f9ec9d1571ec4271a13def96
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - cmake
+      - linux-headers
+      - openssl-dev
+      - ncurses-dev
+      - bison
+      - perl
+      - libtirpc-dev
+      - rpcsvc-proto
+      - pcre2-dev
+      - libxml2-dev
+      - zstd-dev
+      - lz4-dev
+      - fmt-dev
+
+pipeline:
+  # Download and verify MariaDB source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://archive.mariadb.org/mariadb-${{package.version}}/source/mariadb-${{package.version}}.tar.gz" \
+        -o /home/build/mariadb.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/mariadb.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mariadb.tar.gz
+      rm mariadb.tar.gz
+
+  # Configure, build, and install MariaDB.
+  #
+  # Pattern follows wolfi-dev/os mariadb-12.3.yaml (and our own mysql/melange.yaml):
+  # full `make install DESTDIR=…` so the cmake install rules place every file
+  # — binaries, share/, plugin/, mariadb-install-db script — at its canonical
+  # path. Stops us from re-patching manual `cp` paths every time MariaDB's
+  # build tree layout shifts between minor versions.
+  - runs: |
+      cd /home/build/mariadb-${{package.version}}
+      mkdir build && cd build
+
+      # PLUGIN_DUCKDB=NO: the duckdb storage engine is new in 11.4.13 and
+      # builds by default. Its ExternalProject patch step runs
+      # `bash -c "... git apply ..."` and the build env has neither bash nor
+      # git, so it dies with Error 127. Adding both would only trade the
+      # failure for a bundled OLAP engine we do not want in a minimal server
+      # image — so disable it, as with every other optional engine below.
+      cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DINSTALL_PLUGINDIR=lib/mysql/plugin \
+        -DINSTALL_SBINDIR=bin \
+        -DINSTALL_SCRIPTDIR=bin \
+        -DMYSQL_DATADIR=/var/lib/mysql \
+        -DSYSCONFDIR=/etc/mysql \
+        -DWITH_SSL=system \
+        -DWITH_ZLIB=system \
+        -DWITH_PCRE=system \
+        -DWITH_READLINE=ON \
+        -DWITH_UNIT_TESTS=OFF \
+        -DWITH_DEBUG=OFF \
+        -DWITH_JEMALLOC=OFF \
+        -DWITH_SYSTEMD=no \
+        -DWITH_LINUX_AIO=OFF \
+        -DSKIP_TESTS=ON \
+        -DCMAKE_C_FLAGS="-g0" \
+        -DCMAKE_CXX_FLAGS="-g0" \
+        -DPLUGIN_TOKUDB=NO \
+        -DPLUGIN_ROCKSDB=NO \
+        -DPLUGIN_MROONGA=NO \
+        -DPLUGIN_OQGRAPH=NO \
+        -DPLUGIN_CONNECT=NO \
+        -DPLUGIN_SPIDER=NO \
+        -DPLUGIN_DUCKDB=NO \
+        -DPLUGIN_WSREP=NO \
+        -DWITH_WSREP=OFF \
+        -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+        -DWITHOUT_FEDERATED_STORAGE_ENGINE=1
+      make -j$(nproc)
+      make install DESTDIR="${{targets.destdir}}"
+
+  # Trim the install to a minimal footprint and ship mysqld/mysql compat
+  # symlinks + entrypoint.
+  - runs: |
+      D="${{targets.destdir}}"
+
+      # Drop dev / test / docs — keep server, client, plugins, share/.
+      rm -rf "$D/usr/mysql-test" \
+             "$D/usr/mariadb-test" \
+             "$D/usr/sql-bench" \
+             "$D/usr/include" \
+             "$D/usr/share/doc" \
+             "$D/usr/share/man" \
+             "$D/usr/share/info" \
+             "$D/usr/share/groonga" \
+             "$D/usr/share/groonga-normalizer-mysql" \
+             "$D/usr/lib/pkgconfig" \
+             "$D/usr/lib64/pkgconfig"
+
+      # Drop the client SDK — this is a server image, not a libmariadb consumer.
+      # libmariadb is statically linked into the mariadb CLI by default, so
+      # removing the .so does not break the bundled binaries.
+      find "$D/usr/lib" "$D/usr/lib64" -maxdepth 1 \
+        \( -name 'libmariadb*' -o -name 'libmysqlclient*' -o -name '*.a' \) \
+        -delete 2>/dev/null || true
+
+      # Older /usr/share/mysql/ path (some tooling still looks here even with
+      # share/mariadb-…/ present). Mirror so init scripts that pass
+      # --basedir=/usr keep working.
+      if [ -d "$D/usr/share/mariadb" ]; then
+        mkdir -p "$D/usr/share/mysql"
+        cp -rn "$D/usr/share/mariadb/." "$D/usr/share/mysql/" 2>/dev/null || true
+      fi
+
+      # Compat symlinks: legacy tooling calls mysqld/mysql (and so does our
+      # docker-entrypoint). Created before the allowlist trim so they're
+      # preserved by it.
+      ln -sf mariadbd "$D/usr/bin/mysqld"
+      ln -sf mariadb  "$D/usr/bin/mysql"
+
+      # Entrypoint script — auto-initialize on first run. Created before
+      # the allowlist trim so it survives that step's sanity check.
+      cat > "$D/usr/bin/docker-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+
+      if [ ! -f /var/lib/mysql/ibdata1 ]; then
+        echo "Initializing MariaDB data directory..."
+        mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql --force
+      fi
+
+      exec mariadbd --user=mysql "$@"
+      ENTRY
+      chmod +x "$D/usr/bin/docker-entrypoint.sh"
+
+      # Allowlist trim: `make install` ships ~50 binaries (server, client,
+      # test harness, perl scripts, aria/myisam tools, backup tools, legacy
+      # wrappers). Restore the "minimal" promise by keeping only what's
+      # needed for the server to run + the tools typically reached for via
+      # `kubectl exec`:
+      #   mariadbd                    server
+      #   mariadb                     client
+      #   mariadb-install-db          REQUIRED by entrypoint (datadir init)
+      #   my_print_defaults           REQUIRED by mariadb-install-db
+      #   mariadb-admin               k8s liveness/readiness probes (ping)
+      #   mariadb-dump                backups via kubectl exec
+      #   docker-entrypoint.sh        container entrypoint
+      #   mysqld, mysql               compat symlinks (created above)
+      # Removes: mariadb-test, mariadb-client-test (test binaries),
+      # mytop, mariadb-hotcopy, mariadb-secure-installation,
+      # mariadb-setpermission, msql2mysql (perl — drags cmd:perl),
+      # mariadbd-safe, mariadbd-multi, mariadbd-safe-helper (legacy
+      # wrappers), aria_chk, aria_dump_log, aria_ftdump, aria_pack,
+      # aria_read_log, myisamchk, myisam_ftdump, myisamlog, myisampack
+      # (table maintenance — rarely used in containers), mariabackup,
+      # mbstream (separate backup workflow), mariadb-binlog,
+      # mariadb-check, mariadb-conv, mariadb-convert-table-format,
+      # mariadb-find-rows, mariadb-fix-extensions, mariadb-import,
+      # mariadb-plugin, mariadb-show, mariadb-slap, mariadb-tzinfo-to-sql,
+      # mariadb-upgrade, mariadb-waitpid, mariadb-access, mariadb_config,
+      # mysql_config, innochecksum, perror, replace, resolve_stack_dump,
+      # resolveip.
+      allowed_bins="mariadbd mariadb mariadb-install-db my_print_defaults mariadb-admin mariadb-dump docker-entrypoint.sh mysqld mysql"
+      for f in "$D/usr/bin/"*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        name="${f##*/}"
+        case " $allowed_bins " in
+          *" $name "*) ;;
+          *) rm -f "$f" ;;
+        esac
+      done
+
+      # Sanity: critical binaries must still exist after the trim. If the
+      # allowlist drifts (e.g. an upstream rename) this fails the build
+      # inside melange instead of producing a broken image.
+      for required in mariadbd mariadb mariadb-install-db my_print_defaults docker-entrypoint.sh; do
+        test -x "$D/usr/bin/$required" || {
+          echo "FATAL: $required missing after allowlist trim"
+          exit 1
+        }
+      done
+      # Verify compat symlinks survived
+      for s in mysqld mysql; do
+        test -L "$D/usr/bin/$s" || {
+          echo "FATAL: compat symlink $s missing after allowlist trim"
+          exit 1
+        }
+      done
+
+      # Strip ELF binaries and shared libraries in the destdir.
+      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
+        while IFS= read -r -d '' f; do
+          case "$(file -L "$f" 2>/dev/null)" in
+            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
+          esac
+        done
+
+  # Verify the build
+  - runs: |
+      echo "Verifying MariaDB build..."
+      "${{targets.destdir}}/usr/bin/mariadbd" --version
+      "${{targets.destdir}}/usr/bin/mariadb" --version
+      test -x "${{targets.destdir}}/usr/bin/mariadb-install-db" || \
+        echo "WARNING: mariadb-install-db missing — entrypoint will fail at runtime"
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/mariadbd"
+      ls -lh "${{targets.destdir}}/usr/bin/mariadb"
+
+update:
+  enabled: true
+  github:
+    identifier: MariaDB/server
+    use-tag: true
+    tag-filter: "mariadb-11.4."

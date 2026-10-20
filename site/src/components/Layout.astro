@@ -1,0 +1,136 @@
+---
+import '../styles/global.css';
+import { dataset } from '../lib/catalog';
+export interface Props {
+  title?: string;
+  description?: string;
+  /** Set on dated content (blog posts) so search engines see a publish date. */
+  published?: string;
+  /** JSON-LD objects for this page. Rendered as one script per entry. */
+  schema?: object[];
+  /** Trail for BreadcrumbList, excluding Home (added here) and the current page. */
+  breadcrumbs?: { name: string; href: string }[];
+}
+const {
+  title = 'Minimal Containers — free, hardened container images',
+  description = 'Small, hardened, MIT-licensed container images. Cosign-signed, SBOM-attested, with SLSA v1.0 build provenance. No account, no Docker Hub pull limits.',
+  published,
+  schema = [],
+  breadcrumbs,
+} = Astro.props;
+const year = new Date().getFullYear();
+
+// Absolute, self-referencing canonical. GitHub Pages serves /images/nginx as a
+// 301 to /images/nginx/, so both forms exist for a crawler; this names which
+// one is authoritative instead of leaving it to be guessed.
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL('/og.png', Astro.site).href;
+
+// BreadcrumbList. Home is always the first crumb and the current page the last,
+// so callers pass only the middle of the trail.
+const crumbs = breadcrumbs && [
+  { name: 'Home', href: '/' },
+  ...breadcrumbs,
+  { name: title, href: Astro.url.pathname },
+];
+const breadcrumbSchema = crumbs && {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: crumbs.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: c.name,
+    item: new URL(c.href, Astro.site).href,
+  })),
+};
+const allSchema = [...schema, ...(breadcrumbSchema ? [breadcrumbSchema] : [])];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content={published ? 'article' : 'website'} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:site_name" content="Minimal Containers" />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  {published && <meta property="article:published_time" content={published} />}
+  {allSchema.map((s) => (
+    <script type="application/ld+json" set:html={JSON.stringify(s)} />
+  ))}
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;640;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- GoatCounter: cookieless, no personal data, no consent banner needed.
+       Dashboard is private by default (goatcounter settings.go defaults
+       `Public` to "private"), so the numbers are not publicly visible.
+       Loaded async so it never blocks render, and the site works fine when
+       ad blockers drop it — expect undercounting on a technical audience. -->
+  <script data-goatcounter="https://minimal.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="/" class="brand">
+        <img src="/icon.svg" alt="" class="logo" width="26" height="26" />
+        <span class="brand-name">minimal</span>
+      </a>
+      <nav class="nav">
+        <a href="/images/">Images</a>
+        <a href="/docs/">Docs</a>
+        <a href="/compare/">Compare</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about/">Verify</a>
+        <a href="https://github.com/rtvkiz/minimal" rel="noopener" class="nav-cta">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <slot />
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>
+        Minimal Containers · MIT-licensed · built from
+        <a href="https://github.com/wolfi-dev" rel="noopener">Wolfi</a> with
+        <a href="https://github.com/chainguard-dev/apko" rel="noopener">apko</a>.
+      </div>
+      <div>
+        Updated {dataset.buildDate}
+        {dataset.commitSha && (dataset.runUrl
+          ? <> · <a href={dataset.runUrl} rel="noopener">{dataset.commitSha}</a></>
+          : <> · {dataset.commitSha}</>)}
+        · &copy; {year}
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Global copy-to-clipboard for any [data-copy] button.
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
+      if (!btn) return;
+      const text = btn.getAttribute('data-copy') || '';
+      navigator.clipboard.writeText(text).then(() => {
+        const prev = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = prev; }, 1400);
+      }).catch(() => { btn.textContent = 'Failed'; });
+    });
+  </script>
+</body>
+</html>

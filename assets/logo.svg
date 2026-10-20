@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 170" width="600" height="170" role="img" aria-label="minimal — hardened container images">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+
+  <!-- monogram icon (the site's icon.svg, scaled to 92px) -->
+  <g transform="translate(118,39) scale(2.875)">
+    <rect width="32" height="32" rx="8" fill="url(#g)"/>
+    <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M16 7 L24 11.5 L16 16 L8 11.5 Z" fill="#ffffff" fill-opacity="0.9" stroke="none"/>
+      <path d="M8 11.5 L16 16 L16 25 L8 20.5 Z" fill="#ffffff" fill-opacity="0.28"/>
+      <path d="M24 11.5 L16 16 L16 25 L24 20.5 Z" fill="#ffffff" fill-opacity="0.12"/>
+      <path d="M16 7 L24 11.5 L24 20.5 L16 25 L8 20.5 L8 11.5 Z"/>
+      <path d="M16 16 L16 25"/>
+      <path d="M8 11.5 L16 16 L24 11.5"/>
+    </g>
+  </g>
+
+  <!-- wordmark: teal reads on both light and dark GitHub themes -->
+  <text x="232" y="99" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="62" font-weight="700" letter-spacing="-2" fill="#0d9488">minimal</text>
+  <text x="235" y="126" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="14.5" font-weight="500" letter-spacing="3.5" fill="#5b6270">HARDENED CONTAINER IMAGES</text>
+</svg>

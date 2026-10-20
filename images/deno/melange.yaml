@@ -1,0 +1,82 @@
+# Melange build for minimal Deno.
+# Installs Deno's official upstream release binary directly, rather than the
+# Wolfi `deno` package — the free Wolfi package lags behind upstream (stuck at
+# 2.8.2-r0 while 2.8.3 fixes bundled rustls-webpki / hickory CVEs; the fixed
+# Wolfi revision is enterprise-gated). Pulling the official binary lets us track
+# the latest upstream release and pick up its CVE fixes immediately.
+# License: MIT (Deno authors).
+
+package:
+  # Named `deno` (not `deno-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, and every CPE it
+  # generated kept -minimal in the product field
+  # (cpe:2.3:a:deno:deno-minimal:*, cpe:2.3:a:deno-minimal:deno-minimal:*,
+  # ...). NVD indexes this product bare, as cpe:2.3:a:deno:deno:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: deno
+  version: 2.9.7
+  epoch: 0
+  description: "Minimal Deno from the official upstream release binary"
+  copyright:
+    - license: MIT
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi ships a
+    # bare `deno`, so without this apk could install Wolfi's build instead of
+    # this source-built one. provider-priority is evaluated BEFORE version in
+    # that comparator, so this pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 of the official deno-<arch>-unknown-linux-gnu.zip release assets,
+  # updated by update-versions.yml. From:
+  #   https://github.com/denoland/deno/releases/download/v<ver>/deno-<arch>-unknown-linux-gnu.zip.sha256sum
+  sha256_x86: c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490
+  sha256_arm: c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - unzip
+      # deno is a glibc-dynamic binary; needed to run --version at build verify
+      - glibc
+      - libgcc
+
+pipeline:
+  # Download and verify the official upstream binary for the build arch.
+  - runs: |
+      BUILD_ARCH=$(uname -m)
+      case "$BUILD_ARCH" in
+        x86_64)  ARCH_NAME="x86_64";  CHECKSUM="${{vars.sha256_x86}}" ;;
+        aarch64) ARCH_NAME="aarch64"; CHECKSUM="${{vars.sha256_arm}}" ;;
+        *) echo "Unsupported arch: $BUILD_ARCH"; exit 1 ;;
+      esac
+      curl -fsSL --retry 8 --retry-all-errors \
+        "https://github.com/denoland/deno/releases/download/v${{package.version}}/deno-${ARCH_NAME}-unknown-linux-gnu.zip" \
+        -o /tmp/deno.zip
+      echo "${CHECKSUM}  /tmp/deno.zip" | sha256sum -c -
+
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      unzip -o /tmp/deno.zip -d "${{targets.destdir}}/usr/bin/"
+      chmod 0755 "${{targets.destdir}}/usr/bin/deno"
+      rm -f /tmp/deno.zip
+
+  # Verify the installed binary runs and reports the expected version.
+  - runs: |
+      "${{targets.destdir}}/usr/bin/deno" --version
+
+update:
+  enabled: true
+  github:
+    identifier: denoland/deno
+    use-tag: true
+    strip-prefix: v

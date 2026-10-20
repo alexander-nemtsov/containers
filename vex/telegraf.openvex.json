@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/rtvkiz/minimal/vex/telegraf",
+  "author": "rtvkiz",
+  "timestamp": "2026-06-27T00:00:00Z",
+  "version": 3,
+  "tooling": "tools/vex/validate.sh",
+  "statements": [
+    {
+      "vulnerability": { "name": "GHSA-25qr-6mpr-f7qx" },
+      "products": [
+        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "rclone rc `options/set` unauthenticated auth bypass. Telegraf uses rclone's fs library for the remotefile output plugin and never starts the rc remote-control server where this lives, so the code path is unreachable."
+    },
+    {
+      "vulnerability": { "name": "GHSA-jfwf-28xr-xw6q" },
+      "products": [
+        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "rclone rc `operations/fsinfo` unauthenticated backend instantiation + command execution. Reachable only via rclone's rc HTTP server, which telegraf never starts; telegraf only calls rclone's fs library for the remotefile output."
+    },
+    {
+      "vulnerability": { "name": "GHSA-qw24-gh76-8rvv" },
+      "products": [
+        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Unauthenticated command execution in `rclone rcd --rc-serve` via inline remote instantiation. The rc daemon is never started by telegraf, which links rclone only as the fs library for the remotefile output plugin."
+    }
+  ]
+}

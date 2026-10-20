@@ -1,0 +1,224 @@
+# Melange build configuration for minimal MySQL
+# Builds MySQL from source with server + client only
+# No plugins, no extras, minimal footprint
+
+package:
+  # Named `mysql` (not `mysql-minimal`) so vulnerability scanners can identify
+  # it. Syft derives a package's CPE from its apk name, and every CPE it
+  # generated kept -minimal in the product field
+  # (cpe:2.3:a:mysql:mysql-minimal:*, cpe:2.3:a:mysql-minimal:mysql-minimal:*,
+  # ...). NVD indexes this product bare, as cpe:2.3:a:mysql:mysql:*, so none of
+  # them matched, and the Wolfi secdb missed it too.
+  name: mysql
+  version: 8.4.11
+  epoch: 0
+  description: "Minimal MySQL server and client built from source"
+  copyright:
+    - license: GPL-2.0-only
+  dependencies:
+    # apko resolves a top-level package name across ALL repositories and picks
+    # the highest version — it does not prefer our local repo (apko v1.1.6
+    # pkg/apk/apk/repo.go, comparePackages: `compare` is nil for a top-level
+    # request, so the repository-matching tiebreak never runs). Wolfi has no
+    # bare `mysql` package today, but if it ever adds one at a higher version,
+    # apk would silently install it instead of this source-built one.
+    # provider-priority is evaluated BEFORE version in that comparator, so this
+    # pins resolution to our package permanently.
+    provider-priority: 100
+
+vars:
+  # SHA256 checksum of source tarball - updated by update-versions.yml workflow
+  sha256: eb3051164d625dd346a8203f76e0d5d5d9aec51dbe9d51788e39ec6b3f1394c2
+
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - curl
+      - build-base
+      - cmake
+      - linux-headers
+      # Pinned, not bare `openssl-dev`: Wolfi now ships both an openssl-3.6
+      # track and a new openssl-4.0 preview, and the bare provider resolves to
+      # whichever is highest (same bare-toolchain-provider trap as go/nodejs/
+      # rust — see scripts/check-toolchain-pins.sh). mysql 8.4.11's
+      # cmake/ssl.cmake only special-cases OPENSSL_VERSION_MAJOR == 3; on 4.0
+      # it falls through to a legacy OPENSSL_VERSION_NUMBER regex that no
+      # longer matches anything, so FIND_OPENSSL_VERSION silently produces an
+      # empty version ("OPENSSL_VERSION (system) is ..") and configure fails.
+      - openssl-3.6-dev
+      - ncurses-dev
+      - libevent-dev
+      - bison
+      - perl
+      - libtirpc-dev
+      - rpcsvc-proto
+      - protobuf-dev
+
+pipeline:
+  # Download and verify MySQL source
+  - runs: |
+      mkdir -p /home/build
+      curl -fsSL --retry 8 --retry-all-errors "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-${{package.version}}.tar.gz" \
+        -o /home/build/mysql.tar.gz
+
+      # Verify checksum
+      echo "${{vars.sha256}}  /home/build/mysql.tar.gz" | sha256sum -c -
+
+      cd /home/build
+      tar xzf mysql.tar.gz
+      rm mysql.tar.gz
+
+  # Configure, build, and install MySQL.
+  #
+  # Pattern follows wolfi-dev/os mysql-9.7.yaml: `make install DESTDIR=…`
+  # lets MySQL place files at their canonical paths, including the bundled
+  # protobuf 24.4 shared libs into ${prefix}/lib/private/ — exactly where
+  # mysqld's compiled-in RPATH ($ORIGIN/../lib/private) resolves them.
+  # No manual `cp` of build outputs, so we stop fighting MySQL's CMake
+  # layout every time it changes between minor versions.
+  - runs: |
+      cd /home/build/mysql-${{package.version}}
+      mkdir build && cd build
+      cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DMYSQL_DATADIR=/var/lib/mysql \
+        -DSYSCONFDIR=/etc/mysql \
+        -DMYSQL_UNIX_ADDR=/var/run/mysqld/mysqld.sock \
+        -DWITH_SSL=system \
+        -DWITH_ZLIB=bundled \
+        -DDOWNLOAD_BOOST=1 \
+        -DWITH_BOOST=/home/build/boost \
+        -DWITH_UNIT_TESTS=OFF \
+        -DWITH_ROUTER=OFF \
+        -DWITH_DEBUG=OFF \
+        -DCOMPILATION_COMMENT="Minimal Hardened Build" \
+        -DCMAKE_C_FLAGS="-g0" \
+        -DCMAKE_CXX_FLAGS="-g0" \
+        -DWITHOUT_ARCHIVE_STORAGE_ENGINE=1 \
+        -DWITHOUT_BLACKHOLE_STORAGE_ENGINE=1 \
+        -DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+        -DWITHOUT_FEDERATED_STORAGE_ENGINE=1 \
+        -DWITHOUT_NDB_STORAGE_ENGINE=1 \
+        -DWITHOUT_NDBCLUSTER_STORAGE_ENGINE=1 \
+        -DWITHOUT_PERFSCHEMA_STORAGE_ENGINE=0 \
+        -DWITH_NDB=OFF \
+        -DWITH_PROTOBUF=bundled \
+        -DWITH_ICU=bundled
+      make -j$(nproc)
+      make install DESTDIR="${{targets.destdir}}"
+
+  # Trim the install to a minimal footprint, drop X Plugin, ship entrypoint.
+  - runs: |
+      D="${{targets.destdir}}"
+
+      # Drop dev / test / docs — keep server, client, plugins, share/.
+      rm -rf "$D/usr/mysql-test" \
+             "$D/usr/include" \
+             "$D/usr/docs" \
+             "$D/usr/share/doc" \
+             "$D/usr/share/man" \
+             "$D/usr/share/info" \
+             "$D/usr/lib/pkgconfig" \
+             "$D/usr/lib64/pkgconfig"
+
+      # Drop static archives and the libmysqlclient family — this is a server
+      # image, not a client SDK. The mysql CLI links libmysqlclient statically
+      # (see MySQL CMake), so removing the .so does not break it.
+      find "$D/usr/lib" "$D/usr/lib64" -maxdepth 1 \
+        \( -name 'libmysqlclient*' -o -name '*.a' \) -delete 2>/dev/null || true
+
+      # Drop X Plugin (libmysqlx.so, port 33060). It dynamically links the
+      # system libprotobuf-lite even with -DWITH_PROTOBUF=bundled, which
+      # would re-introduce the Wolfi protobuf+absl ABI drift this image is
+      # built to avoid. Classic protocol on 3306 is unaffected.
+      find "$D" -name 'libmysqlx.so' -delete
+
+      # Bundled protobuf shared libs (libprotobuf-lite.so.24.4.0,
+      # libprotobuf.so.24.4.0) were installed to /usr/lib/private/ by
+      # `make install`. mysqld's RPATH resolves them there, and apko's
+      # auto-provides scanner self-satisfies the SO deps from the same
+      # package, so no Wolfi libprotobuf-lite dependency is needed.
+
+      # Entrypoint script — auto-initialize on first run. Created before
+      # the allowlist trim so it survives that step's sanity check.
+      cat > "$D/usr/bin/docker-entrypoint.sh" << 'ENTRY'
+      #!/bin/sh
+      set -e
+
+      if [ ! -f /var/lib/mysql/ibdata1 ]; then
+        echo "Initializing MySQL data directory..."
+        mysqld --initialize-insecure
+      fi
+
+      exec mysqld "$@"
+      ENTRY
+      chmod +x "$D/usr/bin/docker-entrypoint.sh"
+
+      # Allowlist trim: `make install` ships ~26 binaries (server, client,
+      # test harness, perl scripts, dev utilities). Restore the "minimal"
+      # promise by keeping only what's needed for the server to run + the
+      # tools downstream users typically reach for via `kubectl exec`:
+      #   mysqld                 server
+      #   mysql                  client (debugging, smoke tests)
+      #   mysqladmin             k8s liveness/readiness probes (ping)
+      #   mysqldump              backups via kubectl exec
+      #   mysql_tzinfo_to_sql    timezone setup
+      #   docker-entrypoint.sh   container entrypoint
+      # Removes: mysqltest, mysqlxtest, mysql_client_test, mysql_test_event_tracking,
+      # mysqldumpslow (perl), mysqld_safe (legacy), mysqld_multi, mysqlbinlog,
+      # mysqlcheck, mysqlshow, mysqlimport, mysqlslap, mysql_secure_installation,
+      # mysql_keyring_encryption_test, mysql_config_editor, mysql_migrate_keyring,
+      # mysql_config, comp_err, perror.
+      allowed_bins="mysqld mysql mysqladmin mysqldump mysql_tzinfo_to_sql docker-entrypoint.sh"
+      for f in "$D/usr/bin/"*; do
+        [ -e "$f" ] || continue
+        name="${f##*/}"
+        case " $allowed_bins " in
+          *" $name "*) ;;
+          *) rm -f "$f" ;;
+        esac
+      done
+
+      # Sanity: critical binaries must still exist after the trim. If the
+      # allowlist drifts (e.g. an upstream rename) this fails the build
+      # inside melange instead of producing a broken image.
+      for required in mysqld mysql docker-entrypoint.sh; do
+        test -x "$D/usr/bin/$required" || {
+          echo "FATAL: $required missing after allowlist trim"
+          exit 1
+        }
+      done
+
+      # Strip ELF binaries and shared libraries in the destdir.
+      find "$D" -type f \( -perm -u+x -o -name '*.so*' \) -print0 |
+        while IFS= read -r -d '' f; do
+          case "$(file -L "$f" 2>/dev/null)" in
+            *ELF*) strip --strip-unneeded "$f" 2>/dev/null || true ;;
+          esac
+        done
+
+  # Verify the build
+  - runs: |
+      echo "Verifying MySQL build..."
+      "${{targets.destdir}}/usr/bin/mysqld" --version
+      "${{targets.destdir}}/usr/bin/mysql" --version
+      echo "Checking bundled protobuf libs in /usr/lib/private/:"
+      ls -lh "${{targets.destdir}}/usr/lib/private/" 2>/dev/null || \
+        echo "WARNING: /usr/lib/private/ missing — protobuf may not have installed"
+      echo "Checking binary sizes..."
+      ls -lh "${{targets.destdir}}/usr/bin/mysqld"
+      ls -lh "${{targets.destdir}}/usr/bin/mysql"
+
+update:
+  enabled: true
+  github:
+    identifier: mysql/mysql-server
+    use-tag: true
+    tag-filter: "mysql-8.4."
