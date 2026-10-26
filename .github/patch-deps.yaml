@@ -1,0 +1,263 @@
+# Registry for the consolidated patch-deps workflow.
+#
+# Consumed by .github/workflows/patch-deps.yml — matrix-expands one job per
+# row, calling .github/scripts/patch-deps.sh with the row JSON.
+#
+# This replaces patch-bundler-deps.yml, patch-rust-deps.yml, patch-maven-deps.yml.
+# patch-go-deps.yml stays separate — its 350 lines of regression-driven
+# special cases (OTel harmonization, golang.org/x/* family pinning,
+# +incompatible suffix list, main-module self-bump filter, existing-pin
+# preservation) make it a poor fit for a generic schema.
+#
+# Schema (per row)
+# ----------------
+#   name:             short identifier; matrix key + branch base + PR prefix
+#   artifact-type:    grype's `.artifact.type` for this language
+#   update-template:  shell command to bump one dep; supports {pkg}, {ver},
+#                     and (maven-only) {coord}, {group-path}, {artifact-id}
+#   verify-url:       URL to confirm {pkg}@{ver} exists upstream; supports
+#                     same placeholders as update-template
+#   commit-title:     conventional-commit title for the bump commit/PR
+#   pr-summary:       first paragraph of the PR body
+#   coord-map:        (maven only) artifact-name -> group:artifact translation
+#   images:           list of {name, src-root, build-marker}
+#                       - src-root may contain the sentinel <<PKG_VERSION>>
+#                         which the script substitutes for the literal melange
+#                         template `${{package.version}}` (avoids GH Actions
+#                         eating the expression on the way through toJson)
+#                       - build-marker is grepped in melange.yaml; the patch
+#                         block is inserted before the `- runs:` containing it
+
+- name: bundler
+  artifact-type: gem
+  update-template: "gem install {pkg} -v {ver} --no-document"
+  verify-url:      "https://rubygems.org/api/v2/rubygems/{pkg}/versions/{ver}.json"
+  commit-title:    "fix(bundler-deps): patch vulnerable Ruby gem dependencies"
+  pr-summary: |
+    Scans published Bundler-driven images with grype, identifies gem-level CVEs
+    with known fix versions, and emits `gem install <gem> -v <ver>` commands in
+    each image's melange.yaml.
+  images:
+    - { name: rails, src-root: "/home/build", build-marker: "gem install --no-document rails" }
+
+- name: rust
+  artifact-type: rust-crate
+  update-template: "cargo update -p {pkg} --precise {ver}"
+  verify-url:      "https://crates.io/api/v1/crates/{pkg}/{ver}"
+  commit-title:    "fix(rust-deps): patch vulnerable Rust crate dependencies"
+  pr-summary: |
+    Scans published Rust images with grype, identifies crate-level CVEs with
+    known fix versions, and emits targeted `cargo update -p <crate> --precise <ver>`
+    commands in each image's melange.yaml.
+  images:
+    - { name: qdrant, src-root: "/home/build/qdrant-<<PKG_VERSION>>", build-marker: "cargo build --release" }
+    - { name: meilisearch, src-root: "/home/build/meilisearch-<<PKG_VERSION>>", build-marker: "cargo build --release --locked -p meilisearch -p meilitool" }
+    - { name: vaultwarden, src-root: "/home/build/vaultwarden-<<PKG_VERSION>>", build-marker: "cargo build --release" }
+
+- name: python
+  artifact-type: python
+  # --no-deps is deliberate. The install is already pinned by upstream's
+  # constraints file, so a CVE bump must replace exactly one distribution and
+  # leave the rest of the resolved set alone; letting pip re-resolve would
+  # silently move packages the constraints file deliberately fixed. This is the
+  # same surgical intent as the rust row's `cargo update --precise`.
+  update-template: "/opt/airflow/venv/bin/pip install --no-cache-dir --no-deps \"{pkg}=={ver}\""
+  verify-url:      "https://pypi.org/pypi/{pkg}/{ver}/json"
+  commit-title:    "fix(python-deps): patch vulnerable Python package dependencies"
+  pr-summary: |
+    Scans published Python images with grype, identifies distribution-level CVEs
+    with known fix versions, and emits targeted
+    `pip install --no-deps <pkg>==<ver>` commands in each image's melange.yaml.
+
+    Airflow installs ~142 distributions from upstream's pinned constraints file,
+    none of which any other patcher covered before this row existed: grype
+    reports these as `artifact.type: python`, while patch-go-deps only handles
+    Go modules and the bundler/rust/maven rows handle their own ecosystems.
+  images:
+    # build-marker must name a step that runs AFTER the pip install: the patcher
+    # splices its block BEFORE the marker's `- runs:`, and a pip bump only sticks
+    # if it lands on top of the constraints-pinned install rather than before it.
+    # `cp -a /opt/airflow/venv` is the copy-into-destdir step, so the bump happens
+    # after the install and before the venv is staged and trimmed.
+    - { name: airflow, src-root: "/home/build", build-marker: "cp -a /opt/airflow/venv" }
+
+- name: maven
+  artifact-type: java-archive
+  # Maven path uses {coord} (group:artifact) resolved from coord-map[pkg].
+  update-template: "mvn -B versions:use-dep-version -Dincludes={coord} -DdepVersion={ver} -DforceVersion=true || true"
+  verify-url:      "https://repo1.maven.org/maven2/{group-path}/{artifact-id}/{ver}/{artifact-id}-{ver}.pom"
+  commit-title:    "fix(maven-deps): patch vulnerable Maven Java dependencies"
+  pr-summary: |
+    Scans published Maven-driven images with grype, identifies Java-archive CVEs
+    with known fix versions, and emits `mvn versions:use-dep-version` commands
+    in each image's melange.yaml.
+  # grype reports bare artifact names; mvn needs group:artifact. This map grows
+  # organically — add an entry when grype reports a previously-unseen artifact.
+  coord-map:
+    jackson-databind:    com.fasterxml.jackson.core:jackson-databind
+    snakeyaml:           org.yaml:snakeyaml
+    logback-core:        ch.qos.logback:logback-core
+    logback-classic:     ch.qos.logback:logback-classic
+    netty-handler:       io.netty:netty-handler
+    netty-handler-proxy: io.netty:netty-handler-proxy
+    netty-common:        io.netty:netty-common
+    netty-codec:         io.netty:netty-codec
+    netty-codec-dns:     io.netty:netty-codec-dns
+    netty-codec-http:    io.netty:netty-codec-http
+    netty-codec-http2:   io.netty:netty-codec-http2
+    netty-codec-haproxy: io.netty:netty-codec-haproxy
+    netty-resolver-dns:  io.netty:netty-resolver-dns
+    netty-transport-native-epoll: io.netty:netty-transport-native-epoll
+    commons-io:          commons-io:commons-io
+    commons-compress:    org.apache.commons:commons-compress
+    bcprov-jdk18on:      org.bouncycastle:bcprov-jdk18on
+    bcpkix-jdk18on:      org.bouncycastle:bcpkix-jdk18on
+    jose4j:              org.bitbucket.b_c:jose4j
+    okio:                com.squareup.okio:okio
+    protobuf-java:       com.google.protobuf:protobuf-java
+  images:
+    - { name: keycloak, src-root: "/home/build/keycloak-<<PKG_VERSION>>", build-marker: "mvn -B -DskipTests" }
+
+# Bundled-jar rows (mode: bundled-jar) are handled by patch-bundled-jars.sh, not
+# the generic update-template path. They target Java jars baked into a prebuilt
+# upstream distribution (tarball/war), which the maven patcher above can't reach
+# because there is no mvn build to override. The patcher grype-scans the image,
+# finds java-archive CVEs whose fix is a *published* Maven Central artifact, and
+# splices a sha256-pinned swap block into the image's melange.yaml.
+#
+# Per-image fields:
+#   jar-root       directory under the image root to search for jars
+#   policy         auto (default) — apply coord-map matches using strategy
+#                  report-only    — report fixable jars but never modify files
+#   strategy       rename        — install <artifact>-<newver>.jar, drop old
+#                                   (directory classpaths, e.g. opensearch)
+#                  keep-filename — overwrite jar contents, keep the old name so
+#                                   exact-filename classpaths still resolve
+#                                   (e.g. keycloak/Quarkus; grype reads the real
+#                                   version from the jar's internal pom)
+#   splice-before  melange line the auto-block is inserted before
+- name: bundled-jars
+  mode: bundled-jar
+  commit-title: "fix(bundled-jars): patch CVEs in vendored Java jars"
+  pr-summary: |
+    Scans prebuilt-distribution images (whose jars are baked into the upstream
+    tarball, so the maven patcher can't reach them) with grype, finds
+    java-archive CVEs whose fix is a published Maven Central artifact, and
+    splices sha256-pinned jar-swap blocks into each image's melange.yaml.
+  # coord-map is now an OVERRIDE, not a requirement: the group is derived from
+  # grype's purl (pkg:maven/<group>/<artifact>@<ver>). Before that, every
+  # artifact needed an entry here and only one existed, so all other fixable
+  # jars were skipped with "no coord-map entry" — flink kept log4j 2.25.3 and
+  # its six advisories for exactly that reason. Add an entry only when an
+  # artifact's purl is missing or wrong.
+  coord-map:
+    jackson-databind: com.fasterxml.jackson.core:jackson-databind
+  images:
+    - name: opensearch
+      jar-root: usr/share/opensearch
+      strategy: rename
+      splice-before: "  # Verify the distribution shape"
+    - name: keycloak
+      jar-root: opt/keycloak
+      strategy: keep-filename
+      splice-before: "update:"
+    # These upstream binary distributions contain tightly coupled jar families
+    # (Netty/Jackson, Lucene/Solr, BookKeeper/Pulsar). Scan them now, but require
+    # an explicit compatibility review before promoting an artifact to auto.
+    #
+    # What that review means in practice: the image's smoke test must START the
+    # server and prove it serves, so a jar swap that breaks at runtime fails CI
+    # instead of shipping. Audited 2026-08-26:
+    #   zookeeper  boots, binds :2181, ruok -> imok           -> AUTO
+    #   kafka      boots broker, topic create/list round-trip  -> AUTO
+    #   cassandra  boots, nodetool status waits for ^UN        -> AUTO
+    #   solr       boots, /solr/admin/info/system HTTP 200     -> AUTO
+    #   pulsar     boots, /admin/v2/brokers/health HTTP 200    -> AUTO
+    #   flink      boots, JobManager /overview                 -> AUTO
+    #   jenkins    boots, /login serves HTTP 200              -> AUTO
+    #
+    # Strengthen the test first, then promote — not the other way round. All
+    # nine now clear that bar. Four of them already did and were held back on a
+    # misreading of their tests; kafka and jenkins needed the test written.
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for a NORMAL node via `nodetool status`,
+    # which is the runtime safety net a jar swap needs.
+    # BACK TO report-only 2026-08-28. Promoted 2026-08-26, reverted after the
+    # first real patch run (PR #608): jackson-annotations publishes no 2.21.5 (minor-line only), so databind 2.21.5 lands beside annotations 2.19.2 -> NoClassDefFoundError at boot.
+    # Needs the lift to fall back to the newest in-series version before it can
+    # be auto again. The smoke test caught this, which is the system working —
+    # but a build that cannot produce a coherent classpath should not run at all.
+    - name: cassandra
+      jar-root: opt/cassandra
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for HTTP 200 from /solr/admin/info/system,
+    # which is the runtime safety net a jar swap needs.
+    - name: solr
+      jar-root: opt/solr
+      strategy: rename
+      splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for HTTP 200 from /admin/v2/brokers/health,
+    # which is the runtime safety net a jar swap needs.
+    - name: pulsar
+      jar-root: opt/pulsar
+      strategy: rename
+      splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 — its smoke test already boots and waits for the JobManager /overview endpoint,
+    # which is the runtime safety net a jar swap needs.
+    - name: flink
+      jar-root: opt/flink
+      strategy: rename
+      splice-before: "update:"
+    # Added 2026-08-26. These three carry the largest remaining bundled-jar CVE
+    # backlog in the catalog (jenkins 27, kafka 22, zookeeper 22 — dominated by
+    # jackson-databind) and were simply never registered here, so the patcher
+    # had never looked at them. report-only for the same reason as the four
+    # above: promoting to auto requires a smoke test that actually BOOTS the
+    # server, and only zookeeper's does today (see the policy note below).
+    # AUTO. Promoted 2026-08-26 once its smoke test learned to boot Jenkins and
+    # wait for /login to serve — it previously never started a container.
+    - name: jenkins
+      jar-root: usr/share/jenkins
+      strategy: rename
+      splice-before: "update:"
+    # AUTO. Promoted 2026-08-26: its smoke test now boots the broker (KRaft) and
+    # completes a topic create/list round-trip through the admin API, so a jar
+    # swap that breaks at runtime fails CI rather than shipping.
+    # BACK TO report-only 2026-08-28. Promoted 2026-08-26, reverted after the
+    # first real patch run (PR #608): bundles the same artifact at several versions (jetty-http 12.0.33 AND 12.0.34, jackson-core 2.21.1 AND 2.21.2); a swap keyed on one installed version leaves the other behind.
+    # Needs the lift to fall back to the newest in-series version before it can
+    # be auto again. The smoke test caught this, which is the system working —
+    # but a build that cannot produce a coherent classpath should not run at all.
+    - name: kafka
+      jar-root: opt/kafka
+      policy: report-only
+      strategy: rename
+      splice-before: "update:"
+    # AUTO. Promoted 2026-08-26 because its smoke test now clears the bar above:
+    # it boots the server AND completes a real client exchange (ruok -> imok on
+    # :2181), so a jar swap that breaks at class-load or at runtime fails CI
+    # instead of shipping. That test is the compatibility review.
+    - name: zookeeper
+      jar-root: opt/zookeeper
+      strategy: rename
+      splice-before: "update:"
+    # report-only at onboarding (2026-08-29). Zipkin ships a Spring Boot fat jar
+    # that this image explodes onto disk, so all 157 bundled dependencies are
+    # visible and swappable — but they are exactly the tightly coupled families
+    # (Spring, Jackson, Netty, Armeria) that broke cassandra and kafka in PR
+    # #608: jackson-annotations publishes no matching micro release, so a
+    # databind bump lands beside a stale annotations jar and the context fails
+    # to refresh. Same unfixed lift limitation, same expected outcome, so it
+    # starts reporting rather than patching.
+    #
+    # Its smoke test already clears the promotion bar — it boots the server and
+    # completes a span ingest -> query round-trip, and the layout is proven
+    # rename-safe (the launcher scans BOOT-INF/lib rather than trusting
+    # classpath.idx; see images/zipkin/melange.yaml). Promote to auto once the
+    # lift falls back to the newest in-series version.
+    - name: zipkin
+      jar-root: opt/zipkin
+      policy: report-only
+      strategy: rename
+      splice-before: "  # Verify the build."

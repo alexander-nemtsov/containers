@@ -1,0 +1,1018 @@
+name: Patch Go Transitive Dependencies
+
+on:
+  schedule:
+    # Once daily, aligned ahead of build.yml's daily rebuild (00:17 UTC) so
+    # freshly-published Go advisories get patched before that day's rebuild
+    # picks them up. Matches build.yml's move from 6-hourly to daily - keeps
+    # the last of the four former daily slots, ~5h before the new build time.
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  GRYPE_VERSION: v0.109.1
+
+jobs:
+  patch-go-deps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    steps:
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Cache Grype binary
+        id: grype-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /usr/local/bin/grype
+          key: grype-${{ env.GRYPE_VERSION }}-linux-amd64
+
+      - name: Install Grype
+        if: steps.grype-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL --retry 5 --retry-all-errors -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+          tar -tzf /tmp/grype.tar.gz > /dev/null
+          tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
+          rm -f /tmp/grype.tar.gz
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find existing patch-go-deps PR
+        id: existing-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_URL=$(gh pr list \
+            --head patch-go-deps \
+            --base main \
+            --state open \
+            --json url \
+            --jq '.[0].url // ""')
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Scan Go images and generate patches
+        id: scan
+        # Pass GHA context in via env, not inline ${{ }}. A `run:` block that
+        # contains any ${{ }} is treated by GitHub as a templated scalar and
+        # capped at 21000 chars; this block is ~24KB, so even one inline
+        # expression made the whole workflow fail to parse ("Exceeded max
+        # expression length 21000") once the image list grew. With zero ${{ }}
+        # here the block is a plain literal and can grow freely.
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          # Map of image name -> modroot (melange template vars)
+          # Split $ from {{ so GHA doesn't parse them as expressions
+          D='$'
+          # Build dirs per image. Values are space-separated when an image is
+          # a multi-module monorepo (e.g. etcd's server/etcdctl/etcdutl each
+          # have their own go.mod; patching only the root has no effect on
+          # the built binaries). For single-module images, one path suffices.
+          declare -A MODROOTS=(
+            [temporal-ui-server]="/home/build/ui-server-${D}{{package.version}}"
+            [temporal-admin-tools]="/home/build/temporal-${D}{{package.version}}"
+            [temporal-server]="/home/build/temporal-${D}{{package.version}}"
+            [metallb]="/home/build/metallb-${D}{{package.version}}"
+            [victoria-logs]="/home/build/VictoriaLogs-${D}{{package.version}}"
+            [headscale]="/home/build/headscale-${D}{{package.version}}"
+            [postgres-exporter]="/home/build/postgres_exporter-${D}{{package.version}}"
+            [reloader]="/home/build/Reloader-${D}{{package.version}}"
+            [flagger]="/home/build/flagger-${D}{{package.version}}"
+            [kyverno]="/home/build/kyverno-${D}{{package.version}}"
+            [external-secrets]="/home/build/external-secrets-${D}{{package.version}}"
+            [kube-state-metrics]="/home/build/kube-state-metrics-${D}{{package.version}}"
+            [redis-exporter]="/home/build/redis-exporter-${D}{{package.version}}"
+            [caddy]="/home/build/caddy-${D}{{package.version}}"
+            [traefik]="/home/build/traefik-${D}{{package.version}}"
+            [nats]="/home/build/nats-server-${D}{{package.version}}"
+            [minio]="/home/build/minio-${D}{{vars.minio_release}}"
+            [prometheus]="/home/build/prometheus-${D}{{package.version}}"
+            [alertmanager]="/home/build/alertmanager-${D}{{package.version}}"
+            [etcd]="/home/build/etcd-${D}{{package.version}}/server /home/build/etcd-${D}{{package.version}}/etcdctl /home/build/etcd-${D}{{package.version}}/etcdutl"
+            [jaeger]="/home/build/jaeger-${D}{{package.version}}"
+            [victoria-metrics]="/home/build/VictoriaMetrics-${D}{{package.version}}"
+            [otelcol]="/home/build/opentelemetry-collector-${D}{{package.version}}/cmd/otelcorecol"
+            [gitea]="/home/build/gitea-${D}{{package.version}}"
+            [coredns]="/home/build/coredns-${D}{{package.version}}"
+            # openbao is a multi-module monorepo: api/, sdk/, and each of
+            # api/auth/{approle,jwt,kubernetes,ldap,userpass} have their own
+            # go.mod, and their packages get linked into the bao binary.
+            # Patching only the root left transitive CVEs in those modules
+            # unbumped (root cause of our openbao CVE delta vs wolfi-dev/os).
+            [openbao]="/home/build/openbao-${D}{{package.version}} /home/build/openbao-${D}{{package.version}}/api /home/build/openbao-${D}{{package.version}}/sdk /home/build/openbao-${D}{{package.version}}/api/auth/approle /home/build/openbao-${D}{{package.version}}/api/auth/jwt /home/build/openbao-${D}{{package.version}}/api/auth/kubernetes /home/build/openbao-${D}{{package.version}}/api/auth/ldap /home/build/openbao-${D}{{package.version}}/api/auth/userpass"
+            [loki]="/home/build/loki-${D}{{package.version}}"
+            [helm]="/home/build/helm-${D}{{package.version}}"
+            [kubectl]="/home/build/kubernetes-${D}{{package.version}}"
+            [consul]="/home/build/consul-${D}{{package.version}}"
+            [mailpit]="/home/build/mailpit-${D}{{package.version}}"
+            [registry]="/home/build/distribution-${D}{{package.version}}"
+            [tempo]="/home/build/tempo-${D}{{package.version}}"
+            [telegraf]="/home/build/telegraf-${D}{{package.version}}"
+            [mimir]="/home/build/mimir-${D}{{package.version}}"
+            [opentofu]="/home/build/opentofu-${D}{{package.version}}"
+            [trivy]="/home/build/trivy-${D}{{package.version}}"
+            [thanos]="/home/build/thanos-${D}{{package.version}}"
+            [cosign]="/home/build/cosign-${D}{{package.version}}"
+            [zot]="/home/build/zot-${D}{{package.version}}"
+            [syncthing]="/home/build/syncthing-${D}{{package.version}}"
+            [nsq]="/home/build/nsq-${D}{{package.version}}"
+            [gitlab-runner]="/home/build/gitlab-runner-v${D}{{package.version}}"
+            [buildkit]="/home/build/buildkit-${D}{{package.version}}"
+            [syft]="/home/build/syft-${D}{{package.version}}"
+            [grype]="/home/build/grype-${D}{{package.version}}"
+            [node-exporter]="/home/build/node_exporter-${D}{{package.version}}"
+            [blackbox-exporter]="/home/build/blackbox_exporter-${D}{{package.version}}"
+            [pushgateway]="/home/build/pushgateway-${D}{{package.version}}"
+            [oras]="/home/build/oras-${D}{{package.version}}"
+            [gitleaks]="/home/build/gitleaks-${D}{{package.version}}"
+            [step-cli]="/home/build/step-cli-${D}{{package.version}}"
+            [opa]="/home/build/opa-${D}{{package.version}}"
+            [osv-scanner]="/home/build/osv-scanner-${D}{{package.version}}"
+            [notation]="/home/build/notation-${D}{{package.version}}"
+            [conftest]="/home/build/conftest-${D}{{package.version}}"
+            [kubeconform]="/home/build/kubeconform-${D}{{package.version}}"
+            [kube-bench]="/home/build/kube-bench-${D}{{package.version}}"
+            [trufflehog]="/home/build/trufflehog-${D}{{package.version}}"
+            [dex]="/home/build/dex-${D}{{package.version}}"
+            [tailscale]="/home/build/tailscale-${D}{{package.version}}"
+            [descheduler]="/home/build/descheduler-${D}{{package.version}}"
+            [kube-vip]="/home/build/kube-vip-${D}{{package.version}}"
+            [rclone]="/home/build/rclone-${D}{{package.version}}"
+            [restic]="/home/build/restic-${D}{{package.version}}"
+            [seaweedfs]="/home/build/seaweedfs-${D}{{package.version}}"
+            [oauth2-proxy]="/home/build/oauth2-proxy-${D}{{package.version}}"
+            [flux]="/home/build/flux-${D}{{package.version}}"
+            [external-dns]="/home/build/external-dns-${D}{{package.version}}"
+            [metrics-server]="/home/build/metrics-server-${D}{{package.version}}"
+            [velero]="/home/build/velero-${D}{{package.version}}"
+            [kaniko]="/home/build/kaniko-${D}{{package.version}}"
+            [step-ca]="/home/build/step-ca-${D}{{package.version}}"
+            [skopeo]="/home/build/skopeo-${D}{{package.version}}"
+            [kustomize]="/home/build/kustomize-${D}{{package.version}}/kustomize"
+            [sops]="/home/build/sops-${D}{{package.version}}"
+            [crane]="/home/build/crane-${D}{{package.version}}"
+            [kubeseal]="/home/build/kubeseal-${D}{{package.version}}"
+            [cmctl]="/home/build/cmctl-${D}{{package.version}}"
+            [helmfile]="/home/build/helmfile-${D}{{package.version}}"
+            [regctl]="/home/build/regctl-${D}{{package.version}}"
+            [stern]="/home/build/stern-${D}{{package.version}}"
+          )
+
+          # Main module path per image. Grype's buildinfo scan reports the
+          # image's own module as a go-module match, so when upstream publishes
+          # a CVE against that module path the script would emit
+          # `go get <self>@<ver>`, which Go rejects with
+          # "package X is in the main module, so can't request version Y".
+          # Listing the main module here lets the FIXES filter drop self-bumps.
+          declare -A MAIN_MODULES=(
+            [temporal-ui-server]="github.com/temporalio/ui-server/v2"
+            [temporal-admin-tools]="go.temporal.io/server"
+            [temporal-server]="go.temporal.io/server"
+            [metallb]="go.universe.tf/metallb"
+            [victoria-logs]="github.com/VictoriaMetrics/VictoriaLogs"
+            [headscale]="github.com/juanfont/headscale"
+            [postgres-exporter]="github.com/prometheus-community/postgres_exporter"
+            [reloader]="github.com/stakater/Reloader"
+            [flagger]="github.com/fluxcd/flagger"
+            [kyverno]="github.com/kyverno/kyverno"
+            [external-secrets]="github.com/external-secrets/external-secrets"
+            [kube-state-metrics]="k8s.io/kube-state-metrics/v2"
+            [redis-exporter]="github.com/oliver006/redis_exporter"
+            [caddy]="github.com/caddyserver/caddy/v2"
+            [traefik]="github.com/traefik/traefik/v3"
+            [nats]="github.com/nats-io/nats-server/v2"
+            [minio]="github.com/minio/minio"
+            [prometheus]="github.com/prometheus/prometheus"
+            [alertmanager]="github.com/prometheus/alertmanager"
+            [etcd]="go.etcd.io/etcd/server/v3"
+            [jaeger]="github.com/jaegertracing/jaeger"
+            [victoria-metrics]="github.com/VictoriaMetrics/VictoriaMetrics"
+            [otelcol]="go.opentelemetry.io/collector"
+            [gitea]="code.gitea.io/gitea"
+            [coredns]="github.com/coredns/coredns"
+            [openbao]="github.com/openbao/openbao"
+            [loki]="github.com/grafana/loki/v3"
+            [helm]="helm.sh/helm/v3"
+            [kubectl]="k8s.io/kubernetes"
+            [consul]="github.com/hashicorp/consul"
+            [mailpit]="github.com/axllent/mailpit"
+            [registry]="github.com/distribution/distribution/v3"
+            [tempo]="github.com/grafana/tempo"
+            [telegraf]="github.com/influxdata/telegraf"
+            [mimir]="github.com/grafana/mimir"
+            [opentofu]="github.com/opentofu/opentofu"
+            [trivy]="github.com/aquasecurity/trivy"
+            [thanos]="github.com/thanos-io/thanos"
+            [cosign]="github.com/sigstore/cosign/v3"
+            [zot]="zotregistry.dev/zot/v2"
+            [syncthing]="github.com/syncthing/syncthing"
+            [nsq]="github.com/nsqio/nsq"
+            [gitlab-runner]="gitlab.com/gitlab-org/gitlab-runner"
+            [buildkit]="github.com/moby/buildkit"
+            [syft]="github.com/anchore/syft"
+            [grype]="github.com/anchore/grype"
+            [node-exporter]="github.com/prometheus/node_exporter"
+            [blackbox-exporter]="github.com/prometheus/blackbox_exporter"
+            [pushgateway]="github.com/prometheus/pushgateway"
+            [oras]="oras.land/oras"
+            [gitleaks]="github.com/zricethezav/gitleaks/v8"
+            [step-cli]="github.com/smallstep/cli"
+            [opa]="github.com/open-policy-agent/opa"
+            [osv-scanner]="github.com/google/osv-scanner/v2"
+            [notation]="github.com/notaryproject/notation/v2"
+            [conftest]="github.com/open-policy-agent/conftest"
+            [kubeconform]="github.com/yannh/kubeconform"
+            [kube-bench]="github.com/aquasecurity/kube-bench"
+            [trufflehog]="github.com/trufflesecurity/trufflehog/v3"
+            [dex]="github.com/dexidp/dex"
+            [tailscale]="tailscale.com"
+            [descheduler]="sigs.k8s.io/descheduler"
+            [kube-vip]="github.com/kube-vip/kube-vip"
+            [rclone]="github.com/rclone/rclone"
+            [restic]="github.com/restic/restic"
+            [seaweedfs]="github.com/seaweedfs/seaweedfs"
+            [oauth2-proxy]="github.com/oauth2-proxy/oauth2-proxy/v7"
+            [flux]="github.com/fluxcd/flux2/v2"
+            [external-dns]="sigs.k8s.io/external-dns"
+            [metrics-server]="sigs.k8s.io/metrics-server"
+            [velero]="github.com/vmware-tanzu/velero"
+            [kaniko]="github.com/GoogleContainerTools/kaniko"
+            [step-ca]="github.com/smallstep/certificates"
+            [skopeo]="go.podman.io/skopeo"
+            [kustomize]="sigs.k8s.io/kustomize/kustomize/v5"
+            [sops]="github.com/getsops/sops/v3"
+            [crane]="github.com/google/go-containerregistry"
+            [kubeseal]="github.com/bitnami/sealed-secrets"
+            [cmctl]="github.com/cert-manager/cmctl/v2"
+            [helmfile]="github.com/helmfile/helmfile"
+            [regctl]="github.com/regclient/regclient"
+            [stern]="github.com/stern/stern"
+          )
+
+          # Build step markers to insert before
+          declare -A BUILD_MARKERS=(
+            [temporal-ui-server]='CGO_ENABLED=0 go build'
+            [temporal-admin-tools]='CGO_ENABLED=0 go build'
+            [temporal-server]='CGO_ENABLED=0 go build'
+            [metallb]='CGO_ENABLED=0 go build'
+            [victoria-logs]='CGO_ENABLED=0 go build'
+            [headscale]='CGO_ENABLED=0 go build'
+            [postgres-exporter]='CGO_ENABLED=0 go build'
+            [reloader]='CGO_ENABLED=0 go build'
+            [flagger]='CGO_ENABLED=0 go build'
+            [kyverno]='CGO_ENABLED=0 go build'
+            [external-secrets]='CGO_ENABLED=0 go build'
+            [kube-state-metrics]='CGO_ENABLED=0 go build'
+            [redis-exporter]='CGO_ENABLED=0 go build'
+            [caddy]='# Build Caddy from source'
+            [traefik]='# Build Traefik from source'
+            [nats]='# Build NATS from source'
+            [minio]='# Build MinIO from source'
+            [prometheus]='# Build Prometheus from source'
+            [alertmanager]='# Build alertmanager and amtool from source'
+            [etcd]='# etcd 3.6 is a multi-module monorepo'
+            [jaeger]='CGO_ENABLED=0 go build'
+            [victoria-metrics]='CGO_ENABLED=0 go build'
+            [otelcol]='CGO_ENABLED=0 go build'
+            [gitea]='# Build frontend assets'
+            [coredns]='CGO_ENABLED=0 go build'
+            [openbao]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [loki]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [helm]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kubectl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [consul]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [mailpit]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [registry]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [tempo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [telegraf]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [mimir]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            # trivy's build line carries GOEXPERIMENT=jsonv2 (it imports the
+            # experimental encoding/json/v2), so the generic
+            # "CGO_ENABLED=0 go build" marker doesn't substring-match and the
+            # block was silently skipped. Match the unique jsonv2 build instead.
+            [trivy]='GOEXPERIMENT=jsonv2 go build'
+            [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [cosign]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [zot]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [syncthing]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [nsq]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [gitlab-runner]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [buildkit]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [syft]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [grype]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [node-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [blackbox-exporter]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [pushgateway]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [oras]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [gitleaks]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [step-cli]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [opa]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [osv-scanner]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [notation]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [conftest]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kubeconform]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kube-bench]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [trufflehog]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [dex]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [tailscale]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [descheduler]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kube-vip]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [rclone]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [restic]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [seaweedfs]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [oauth2-proxy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [flux]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [external-dns]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [metrics-server]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [velero]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [step-ca]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kustomize]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [sops]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [crane]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [kubeseal]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [cmctl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [helmfile]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [regctl]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+            [stern]='GOTOOLCHAIN=local CGO_ENABLED=0 go build'
+          )
+
+          # Probe build command per test-and-keep image (see TESTKEEP_IMAGES
+          # below). Must match the image's REAL build (same tags/GOEXPERIMENT/
+          # target) or the compile-check makes wrong keep/drop calls. `-mod=mod`
+          # skips vendoring during probing; `-o /dev/null` discards the binary.
+          declare -A TESTKEEP_BUILD=(
+            [caddy]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/caddy'
+            [kaniko]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/executor'
+            [skopeo]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags containers_image_openpgp -o /dev/null ./cmd/skopeo'
+            [trivy]='GOTOOLCHAIN=local CGO_ENABLED=0 GOEXPERIMENT=jsonv2 go build -mod=mod -o /dev/null ./cmd/trivy'
+            [opentofu]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -o /dev/null ./cmd/tofu'
+            [thanos]='GOTOOLCHAIN=local CGO_ENABLED=0 go build -mod=mod -tags netgo,slicelabels -o /dev/null ./cmd/thanos'
+          )
+          # Minimum dependency floor needed by a source compatibility backport
+          # before independently probing the generated candidates. This is a
+          # floor, not a cap: MVS and later candidates can still move it forward.
+          declare -A TESTKEEP_SEED=(
+            [caddy]='github.com/google/cel-go@v0.29.2'
+          )
+
+          HAS_PATCHES=false
+          PATCHED_LIST=""
+          SUMMARY=""
+
+          # Images excluded from automated transitive dep-patching. Some Go apps
+          # have dependency graphs too large and tightly-coupled to force-bump
+          # safely: grype flags ~20 transitive CVEs at once and pinning them to
+          # exact fix versions fights Go's MVS, producing cascading conflicts
+          # that no generation-time resolver reliably untangles (trivy: rclone
+          # needs aws s3 v1.99.0, sigstore-go transitively needs v1.101.0, grype
+          # pinned v1.97.3 → build aborts). Wolfi's own HOW_TO_PATCH_CVES.md says
+          # to hand-resolve these locally, and Chainguard does not force-bump them
+          # either. For excluded images, transitive CVEs are picked up via the
+          # upstream app-version bump (update-versions.yml — the vendor bumps
+          # their own go.mod) plus the daily base rebuild; a genuinely
+          # reachable gap gets a manual targeted bump or a VEX not_affected.
+          # trivy/kaniko/skopeo vendor the docker/moby/buildkit/containers stack,
+          # so grype's fixes can't be force-bumped wholesale (docker/docker breaks
+          # kaniko's vendored archive API; docker/cli conflicts with buildkit/
+          # fulcio in skopeo → `go get` aborts). Rather than skip them, they use
+          # TEST-AND-KEEP: the generated block probes each candidate fix against
+          # the real build command and keeps only those that still compile, so
+          # every safely-patchable CVE lands now and only genuinely-incompatible
+          # ones wait for the upstream release (logged per-dep, not silent).
+          # SKIP_IMAGES stays for images we never auto-patch at all (none now).
+          # thanos joined this class in 2026-08: grype reports a mongo-driver CVE
+          # fixed in v1.17.7, but thanos's full module graph pulls rclone v1.74.3,
+          # which requires mongo-driver v1.17.9. Because the whole candidate set
+          # goes in as one batched `go get`, that single below-graph pin aborts
+          # the batch ("rclone@v1.74.3 requires mongo-driver@v1.17.9, not
+          # v1.17.7") and drags docker/cli down with it, failing every thanos
+          # build on the patch-go-deps PR. Harmonization (above) can't catch it:
+          # it only reads the go.mod of modules that are themselves in the fix
+          # set, and rclone isn't one of them. Test-and-keep probes each
+          # candidate independently, so the unsatisfiable pin is dropped and the
+          # other ~14 CVE fixes still land.
+          SKIP_IMAGES=" "
+          TESTKEEP_IMAGES=" caddy trivy kaniko skopeo opentofu thanos "
+          for IMAGE in "${!MODROOTS[@]}"; do
+            if [[ "$SKIP_IMAGES" == *" $IMAGE "* ]]; then
+              echo "=== Skipping $IMAGE (excluded from auto transitive dep-patching; tracked via update-versions + base rebuild) ==="
+              continue
+            fi
+            IS_TESTKEEP=false
+            [[ "$TESTKEEP_IMAGES" == *" $IMAGE "* ]] && IS_TESTKEEP=true
+            echo "=== Scanning $IMAGE (test-and-keep=$IS_TESTKEEP) ==="
+            FULL_IMAGE="${REGISTRY}/${OWNER}/minimal-${IMAGE}:latest"
+            MELANGE_FILE="images/${IMAGE}/melange.yaml"
+            BEFORE_HASH=$(sha256sum "$MELANGE_FILE" | awk '{print $1}')
+
+            # DO NOT remove the existing auto-generated patch block here.
+            # Earlier behavior: strip block → scan image (which is already
+            # patched and reports zero CVEs) → conclude "no fixes needed" →
+            # never re-add → next build is unpatched → CVEs return.
+            # Caused helm/registry/kubectl regressions (PR #221).
+            # Removal now happens later, only when we're about to write a new
+            # block, so a truly-empty FIXES set leaves the old block in place.
+
+            # Scan with grype, extract go-module CVEs with fix versions (skip stdlib)
+            FIXES=$(grype "$FULL_IMAGE" -o json 2>/dev/null | \
+              jq -r '
+                [.matches[]
+                  | select(.artifact.type == "go-module")
+                  | select(.artifact.name != "stdlib")
+                  | select(.vulnerability.fix.versions | length > 0)
+                  | {pkg: .artifact.name, fix: .vulnerability.fix.versions[0]}
+                ]
+                | unique_by(.pkg)
+                | .[]
+                | "\(.pkg)@v\(.fix)"
+              ' 2>/dev/null | sed 's/@vv/@v/g' | sort -u || true)
+
+            # Preserve existing pins. Grype scans the already-patched image,
+            # so it usually only reports newly-published CVEs, not the deps
+            # the existing patch block is keeping clean. If we don't merge,
+            # the new (smaller) block replaces the old (larger) block and the
+            # previously-fixed CVEs return (loki/coredns regression 2026-06-05).
+            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+              EXISTING=$(awk '/# patch-go-deps: auto-generated/,/# end-patch-go-deps/' "$MELANGE_FILE" \
+                | grep -oE '[a-zA-Z0-9._/-]+@v?[0-9][0-9a-zA-Z.+-]*' \
+                | sort -u || true)
+              while IFS= read -r ep; do
+                [ -z "$ep" ] && continue
+                pkg="${ep%@*}"
+                existing_ver="${ep##*@}"
+                reported=$(echo "$FIXES" | awk -F@ -v pkg="$pkg" '$1 == pkg { print; exit }')
+                if [ -n "$reported" ]; then
+                  reported_ver="${reported##*@}"
+                  highest=$(printf '%s\n%s\n' "$existing_ver" "$reported_ver" | sort -V | tail -1)
+                  if [ "$highest" = "$existing_ver" ] && [ "$existing_ver" != "$reported_ver" ]; then
+                    # Grype reports the first fixed version, which can be older
+                    # than a pin we already tested. Never move a maintained pin
+                    # backwards when regenerating the block.
+                    FIXES=$(echo "$FIXES" | awk -F@ -v pkg="$pkg" '$1 != pkg')
+                    FIXES=$(printf '%s\n%s' "$FIXES" "$ep")
+                    echo "  preserving newer existing pin: $reported -> $ep"
+                  fi
+                else
+                  FIXES=$(printf '%s\n%s' "$FIXES" "$ep")
+                  echo "  preserving existing pin: $ep"
+                fi
+              done <<< "$EXISTING"
+              FIXES=$(echo "$FIXES" | grep -v '^$' | sort -u)
+            fi
+
+            if [ -z "$FIXES" ]; then
+              # No fixable CVEs reported. This usually means the existing
+              # patch block IS working — the scanned image already has the
+              # bumped deps. DON'T touch the melange.yaml; leaving the block
+              # in place is what keeps future rebuilds patched.
+              echo "  No fixable Go dep CVEs (existing patch block, if any, preserved)"
+              continue
+            fi
+
+            MODROOT="${MODROOTS[$IMAGE]}"
+            MARKER="${BUILD_MARKERS[$IMAGE]}"
+
+            # Modules that use Go's "+incompatible" versioning: their import
+            # path lacks a /vN suffix despite shipping major versions ≥ 2.
+            # `go get pkg@vX.Y.Z` fails for these with "invalid version: unknown
+            # revision"; the correct form is `go get pkg@vX.Y.Z+incompatible`.
+            # Add to this list when a new offender shows up in CI failures.
+            INCOMPAT_MODULES=(
+              "github.com/docker/docker"
+              "github.com/docker/cli"
+              "github.com/docker/distribution"
+              "github.com/Microsoft/hcsshim"
+              "k8s.io/kubernetes"
+            )
+
+            # Build go get commands
+            GO_GETS=""
+            APPLIED_COUNT=0
+            MAIN_MOD="${MAIN_MODULES[$IMAGE]:-}"
+
+            # When grype reports a CVE on any golang.org/x/* package, the
+            # bump usually also requires sibling x/* modules at compatible
+            # versions (e.g. x/crypto v0.52.0 wants x/sys v0.45.0). Grype
+            # only flags the CVE'd package, so the rest of the family stays
+            # at the old version and `go mod vendor` refuses the inconsistent
+            # graph. Pre-fetch the latest of each x/* sibling and add them
+            # to FIXES so they bump together. Matches Chainguard's pattern
+            # (wolfi-dev/os/loki-3.7.yaml lists x/crypto + x/net + x/sys +
+            # x/text + x/term in one bump block).
+            # OTel family harmonization: grype reports per-submodule fix
+            # versions (e.g. otel@v1.41.0 + otel/sdk@v1.43.0). otel/sdk@v1.43.0
+            # actually requires otel@v1.43.0 — pinning the parent at v1.41.0
+            # breaks the build (etcd PR #220 failure). Find the highest version
+            # among all suggested otel-family bumps and rewrite every entry to
+            # that version, so the family stays internally consistent.
+            OTEL_LINES=$(echo "$FIXES" | grep -E "^go\.opentelemetry\.io/" || true)
+            if [ -n "$OTEL_LINES" ]; then
+              # Pick the maximum of (a) highest grype-suggested otel version
+              # and (b) the proxy @latest of go.opentelemetry.io/otel. Some
+              # transitive deps (e.g. prometheus/prometheus) require a newer
+              # otel/sdk than grype's "fix version" reports — using @latest
+              # ensures compatibility with the rest of the dep graph.
+              OTEL_GRYPE_TOP=$(echo "$OTEL_LINES" | sed 's/.*@//' | sort -V | tail -1)
+              OTEL_PROXY_TOP=$(curl -fs --max-time 10 "https://proxy.golang.org/go.opentelemetry.io/otel/@latest" 2>/dev/null | jq -r '.Version // ""')
+              OTEL_TOP=$(printf '%s\n%s\n' "$OTEL_GRYPE_TOP" "$OTEL_PROXY_TOP" | grep -v '^$' | sort -V | tail -1)
+              OTEL_TOP_MAJOR="${OTEL_TOP#v}"; OTEL_TOP_MAJOR="${OTEL_TOP_MAJOR%%.*}"
+              echo "  Detected go.opentelemetry.io/* bumps — harmonizing to ${OTEL_TOP} (grype top=$OTEL_GRYPE_TOP, proxy latest=$OTEL_PROXY_TOP)"
+              # go.opentelemetry.io/otel/log, otel/sdk/log, the otlplog
+              # exporters, and the contrib log bridges (otellogrus, otelzap)
+              # each carry their OWN independent version line — some are
+              # still pre-1.0 (v0.x) for images whose vendored source predates
+              # the otel-go release that graduated them to v1.x (verified
+              # against traefik v3.7.13's and temporal-server v1.32.0's own
+              # go.mod on 2026-10-04: both pin otel/log and otel/sdk/log at
+              # v0.20.0, not v1.x). Forcing a v0.x entry up to OTEL_TOP (v1.x)
+              # is a breaking major-version jump — their own vendored code
+              # calls log.String/log.KeyValue as package functions that
+              # v1.47.0's restructured API no longer exports — and broke
+              # temporal-server/traefik even though loki/mimir/tempo/zot (on
+              # the newer v1.x-era API already) needed exactly this bump.
+              # Chainguard/Wolfi's own packages hit the identical fork and
+              # resolve it by pinning the log family to its own compatible
+              # version instead of forcing it to the core otel version
+              # (wolfi-dev/os temporal.yaml: `otel/log@v0.20.0` with an
+              # explicit `replaces` pin, while otel/otel-sdk/otlptrace* move
+              # to v1.44.0) — so only harmonize an entry to OTEL_TOP when it
+              # is already on the SAME major line; an entry on a different
+              # major is left at its own grype-suggested fix version instead
+              # of being silently skipped, so a genuine same-line CVE fix
+              # still lands.
+              # The log family's own pre-1.0 line (otel/log, otel/sdk/log,
+              # the otlplog exporters, stdoutlog, otellogrus/otelzap bridges)
+              # had its OWN breaking rewrite at sdk/log v0.21.0 / log v0.21.0,
+              # dropping log.KeyValue/log.String in favor of attribute.KeyValue
+              # — same break as jumping to OTEL_TOP, just one release earlier.
+              # grype suggests this version directly (never mentioning
+              # OTEL_TOP), so it slips past the major-line guard below and
+              # broke loki/mimir/tempo/temporal-server (2026-10-11/12: grype
+              # fix-version was sdk/log@v0.21.0, applied as-is, upstream still
+              # on the pre-rewrite API). Never auto-apply a grype suggestion
+              # for this family unless it lands on OTEL_TOP's major line.
+              LOG_FAMILY_RE='^go\.opentelemetry\.io/(otel/log|otel/sdk/log|otel/exporters/otlp/otlplog/|otel/exporters/stdout/stdoutlog|contrib/bridges/otellogrus|contrib/bridges/otelzap)'
+
+              # otel-go's CORE module started hard-requiring otel/log at its
+              # own version starting with the v1.47.0 release (verified:
+              # v1.44.0/v1.46.0 go.mod has no otel/log require line, v1.47.0
+              # does). So forcing core otel/otel-sdk/otlptrace* up to an
+              # OTEL_TOP of v1.47.0+ drags otel/log along even when nothing
+              # in FIXES explicitly asked for it — broke loki/mimir/tempo/
+              # temporal-server a SECOND time (2026-10-12) after the
+              # log-family-only guard above already landed, because the
+              # break comes from the core bump, not from an explicit
+              # otel/log entry. Detect this once per run and, if the image's
+              # OWN log family is still pre-1.0 (checked below), refuse to
+              # force ANY otel-family package to OTEL_TOP — core included —
+              # and fall back to each package's own grype-suggested version.
+              OTEL_TOP_REQUIRES_LOG=false
+              OTEL_TOP_CORE_MOD=$(curl -fs --max-time 10 "https://proxy.golang.org/go.opentelemetry.io/otel/@v/${OTEL_TOP}.mod" 2>/dev/null || true)
+              echo "$OTEL_TOP_CORE_MOD" | grep -qE '^[[:space:]]+go\.opentelemetry\.io/otel/log[[:space:]]' && OTEL_TOP_REQUIRES_LOG=true
+
+              SOURCE_ON_OLD_LOG_API=false
+              while IFS= read -r line; do
+                pkg="${line%@*}"
+                if echo "$pkg" | grep -qE "$LOG_FAMILY_RE"; then
+                  cur_major="${line##*@v}"; cur_major="${cur_major%%.*}"
+                  [ "$cur_major" != "$OTEL_TOP_MAJOR" ] && SOURCE_ON_OLD_LOG_API=true
+                fi
+              done <<< "$OTEL_LINES"
+              # The grype-derived signal above only fires when grype's scan
+              # of the CURRENTLY PUBLISHED image happens to also flag a
+              # log-family CVE in the same run — incidental, not guaranteed.
+              # temporal-server broke a THIRD time (2026-10-13) with the
+              # signal above never firing: its published image apparently
+              # didn't trip a log-family grype match that run, so OTEL_LINES
+              # had no log-family entry, SOURCE_ON_OLD_LOG_API stayed false,
+              # and the core bump to v1.47.0 went through unguarded even
+              # though temporal-server v1.32.1's own go.mod verifiably pins
+              # otel/log at v0.20.0. Back it with a direct, verified list
+              # instead of depending on grype's luck.
+              case " loki mimir tempo temporal-server " in
+                *" $IMAGE "*) SOURCE_ON_OLD_LOG_API=true ;;
+              esac
+              [ "$OTEL_TOP_REQUIRES_LOG" = true ] && [ "$SOURCE_ON_OLD_LOG_API" = true ] && \
+                echo "  OTEL_TOP (${OTEL_TOP}) requires otel/log and this image's log family is still pre-1.0 — not forcing ANY otel-family package to OTEL_TOP"
+
+              NEW_OTEL=""
+              SDK_LOG_ON_OTEL_TOP=false
+              while IFS= read -r line; do
+                pkg="${line%@*}"
+                cur_major="${line##*@v}"; cur_major="${cur_major%%.*}"
+                is_log_family=false
+                echo "$pkg" | grep -qE "$LOG_FAMILY_RE" && is_log_family=true
+                if [ "$is_log_family" = true ] && [ "$cur_major" != "$OTEL_TOP_MAJOR" ]; then
+                  echo "    drop $line: log-family pre-1.0 fix version is the breaking log.KeyValue/log.String rewrite, not safe to auto-apply"
+                elif [ "$is_log_family" = false ] && [ "$OTEL_TOP_REQUIRES_LOG" = true ] && [ "$SOURCE_ON_OLD_LOG_API" = true ]; then
+                  echo "    keep $line: not forcing to OTEL_TOP (${OTEL_TOP}) — it requires otel/log, which this image's source isn't on"
+                  NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")
+                elif [ "$cur_major" = "$OTEL_TOP_MAJOR" ]; then
+                  NEW_OTEL=$(printf '%s\n%s@%s' "$NEW_OTEL" "$pkg" "$OTEL_TOP")
+                  [ "$pkg" = "go.opentelemetry.io/otel/sdk/log" ] && SDK_LOG_ON_OTEL_TOP=true
+                else
+                  echo "    keep $line: on v${cur_major}.x, OTEL_TOP is v${OTEL_TOP_MAJOR}.x (different major line, not forcing)"
+                  NEW_OTEL=$(printf '%s\n%s' "$NEW_OTEL" "$line")
+                fi
+              done <<< "$OTEL_LINES"
+              FIXES=$(echo "$FIXES" | grep -vE "^go\.opentelemetry\.io/" || true)
+              FIXES=$(printf '%s%s' "$FIXES" "$NEW_OTEL")
+
+              # otel/log family sweep: only once sdk/log has actually landed
+              # on OTEL_TOP's major line above (i.e. this image's own source
+              # already expects the newer API) do otel/log and its exporters/
+              # bridges need to move too — otherwise leave them alone, same
+              # as the guard above. Bumping otel/sdk/log alone (which
+              # requires a newer otel/log) leaves otel/log behind, and every
+              # log exporter that imports it — otlploggrpc, otlploghttp,
+              # stdout/stdoutlog, and the contrib/bridges/otellogrus and
+              # otelzap bridges — each versioned on their OWN separate 0.x
+              # line — fails to compile against the mismatched API
+              # ("undefined: log.Value", "api.KeyValue" ...). Hit loki/mimir/
+              # tempo at once (2026-10-04) because none of them run
+              # TEST-AND-KEEP probing, so nothing caught the broken graph
+              # before it shipped. `go get` on a module an image doesn't
+              # actually import is a harmless no-op that `go mod tidy -e`
+              # prunes right back out, so this is safe to apply unconditionally
+              # once the major-line guard above confirms it is warranted.
+              if [ "$SDK_LOG_ON_OTEL_TOP" = true ]; then
+                FIXES=$(echo "$FIXES" | grep -v "^go\.opentelemetry\.io/otel/log@" || true)
+                FIXES=$(printf '%s\n%s@%s' "$FIXES" "go.opentelemetry.io/otel/log" "$OTEL_TOP")
+                echo "    + go.opentelemetry.io/otel/log@${OTEL_TOP} (sibling of sdk/log)"
+                for logexp in \
+                  go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc \
+                  go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp \
+                  go.opentelemetry.io/otel/exporters/stdout/stdoutlog \
+                  go.opentelemetry.io/contrib/bridges/otellogrus \
+                  go.opentelemetry.io/contrib/bridges/otelzap; do
+                  exp_latest=$(curl -fs --max-time 10 "https://proxy.golang.org/${logexp}/@latest" 2>/dev/null | jq -r '.Version // ""')
+                  [ -z "$exp_latest" ] && continue
+                  FIXES=$(echo "$FIXES" | grep -v "^${logexp}@" || true)
+                  FIXES=$(printf '%s\n%s@%s' "$FIXES" "$logexp" "$exp_latest")
+                  echo "    + ${logexp}@${exp_latest} (otel/log exporter sibling)"
+                done
+              fi
+            fi
+
+            X_FAMILY_SEEN=$(echo "$FIXES" | grep -oE "^golang\.org/x/[a-z]+" | sort -u || true)
+            if [ -n "$X_FAMILY_SEEN" ]; then
+              echo "  Detected golang.org/x/* bump — pinning whole family to @latest"
+              # Strip any grype-suggested x/* entries — they may be older
+              # fix versions that conflict with other x/* siblings (e.g.
+              # grype said x/sys@v0.44.0 but x/crypto@v0.52.0 needs v0.45.0).
+              # Re-add every sibling at proxy.golang.org @latest so the
+              # graph is internally consistent.
+              FIXES=$(echo "$FIXES" | grep -vE "^golang\.org/x/(crypto|net|sys|text|term|time|sync|tools)@" || true)
+              for sibling in crypto net sys text term time sync tools; do
+                pkg="golang.org/x/$sibling"
+                latest=$(curl -fs --max-time 10 "https://proxy.golang.org/${pkg}/@latest" 2>/dev/null | jq -r '.Version // ""')
+                [ -z "$latest" ] && continue
+                FIXES=$(printf '%s\n%s' "$FIXES" "${pkg}@${latest}")
+                echo "    + ${pkg}@${latest}"
+              done
+            fi
+
+            # Sibling-requirement harmonization (general; no per-module config).
+            # grype's fix version for a module can be LOWER than what another
+            # module in this same bump set requires. Example (trivy PR #380):
+            # grype says timestamp-authority/v2@v2.1.0, but the co-bumped
+            # sigstore-go@v1.2.0 requires timestamp-authority/v2@v2.1.2. `go get`
+            # then aborts the whole build with "requires X@v2.1.2, not X@v2.1.0".
+            # For each bumped module, fetch its go.mod from the proxy; for any
+            # sibling ALSO in this bump set, raise that sibling's pin to the
+            # required version when it's higher. The raised version is always
+            # >= grype's fix, so the CVE stays patched — this corrects upward,
+            # it never skips a bump. Generalizes the otel/x-family harmonizers
+            # above to arbitrary cross-module constraints.
+            declare -A PIN
+            while IFS= read -r mv; do
+              [ -z "$mv" ] && continue
+              PIN["${mv%@*}"]="${mv##*@}"
+            done <<< "$FIXES"
+            HARMONIZED=false
+            for mv in $FIXES; do
+              [ -z "$mv" ] && continue
+              hmod="${mv%@*}"; hver="${mv##*@}"
+              gomod=$(curl -fs --max-time 10 "https://proxy.golang.org/${hmod}/@v/${hver}.mod" 2>/dev/null) || continue
+              while read -r sib req; do
+                [ -n "$sib" ] || continue
+                cur="${PIN[$sib]:-}"
+                [ -n "$cur" ] || continue
+                hi=$(printf '%s\n%s\n' "$cur" "$req" | sort -V | tail -1)
+                if [ "$hi" != "$cur" ]; then
+                  echo "  Harmonizing $sib: $cur -> $hi (required by ${hmod}@${hver})"
+                  PIN["$sib"]="$hi"; HARMONIZED=true
+                fi
+              done < <(echo "$gomod" | awk '
+                  $1=="require" && NF>=3 { print $2, $3; next }
+                  $1 ~ /\// && $2 ~ /^v[0-9]/ { print $1, $2 }')
+            done
+            if [ "$HARMONIZED" = true ]; then
+              NEWFIXES=""
+              for k in "${!PIN[@]}"; do NEWFIXES=$(printf '%s\n%s@%s' "$NEWFIXES" "$k" "${PIN[$k]}"); done
+              FIXES=$(echo "$NEWFIXES" | grep -v '^$' | sort -u)
+            fi
+
+            while IFS= read -r mod_ver; do
+              [ -z "$mod_ver" ] && continue
+              # Drop self-references — Go refuses `go get <main-module>@<ver>`
+              # inside its own source tree.
+              if [ -n "$MAIN_MOD" ] && [[ "$mod_ver" == "${MAIN_MOD}@"* ]]; then
+                echo "  Skipping main-module self-bump: $mod_ver"
+                continue
+              fi
+              # loki and thanos both import internal prometheus packages from a
+              # pinned fork/older version (e.g. thanos: prometheus/tsdb/errors,
+              # which prometheus removed in newer tags). Bumping
+              # prometheus/prometheus to @latest breaks their build with
+              # "module found (vX) but does not contain package ...". Pin them.
+              if { [ "$IMAGE" = "loki" ] || [ "$IMAGE" = "thanos" ]; } && [[ "$mod_ver" == github.com/prometheus/prometheus@* ]]; then
+                echo "  Skipping incompatible ${IMAGE} module bump: $mod_ver"
+                continue
+              fi
+              # (trivy is fully excluded via SKIP_IMAGES above — its graph is too
+              # tangled to force-bump; its transitive CVEs come in via the upstream
+              # version bump. No per-module trivy skips needed here anymore.)
+              # Telegraf's remotefile plugin imports rclone's fs package directly
+              # and tracks a specific rclone commit (pinned as a pseudo-version in
+              # telegraf's go.mod). Bumping rclone ahead of that pin breaks
+              # `go build ./cmd/telegraf` against rclone API churn — first it was
+              # fs.LogOutput (removed v1.73), now fs.SetLogger (PR #380). Chainguard
+              # carries the same rclone CVEs for this reason.
+              #
+              # Robust, fail-safe self-healing probe (replaces the earlier
+              # fs.LogOutput symbol grep, which false-healed when telegraf switched
+              # to fs.SetLogger — a single symbol can't track arbitrary API churn):
+              # only take grype's rclone bump if telegraf's OWN go.mod already
+              # requires rclone >= the fix version. If telegraf upstream has moved
+              # to that rclone, its source is compatible with it; if not, defer.
+              # This is a version comparison, so it cannot false-heal on a symbol
+              # rename, and it auto-resumes the day telegraf adopts >= the fix.
+              if [ "$IMAGE" = "telegraf" ] && [[ "$mod_ver" == github.com/rclone/rclone@* ]]; then
+                fix_ver="${mod_ver##*@}"
+                TG_VER=$(awk '/^package:/{p=1} p && /^  version:/{print $2; exit}' "$MELANGE_FILE" | tr -d '"')
+                TG_RCLONE=$(curl -fsSL --max-time 10 "https://raw.githubusercontent.com/influxdata/telegraf/v${TG_VER}/go.mod" 2>/dev/null \
+                  | awk '$1=="github.com/rclone/rclone"{print $2; exit}')
+                if [ -z "$TG_RCLONE" ] || [ "$(printf '%s\n%s\n' "$TG_RCLONE" "$fix_ver" | sort -V | tail -1)" != "$TG_RCLONE" ]; then
+                  echo "  Skipping incompatible Telegraf module bump: $mod_ver (telegraf v${TG_VER} pins rclone ${TG_RCLONE:-unknown} < fix ${fix_ver}; source couples to rclone's fs API. Resumes when telegraf adopts rclone >= ${fix_ver})"
+                  continue
+                fi
+                echo "  Telegraf v${TG_VER} pins rclone ${TG_RCLONE} >= ${fix_ver} — letting bump $mod_ver proceed"
+              fi
+              # gitleaks 8.30.x pins mholt/archives v0.1.2, whose rar.go targets
+              # the old rardecode/v2 (<=v2.1.x) reader interface. grype flags a
+              # rardecode CVE fixed in v2.2.0, but v2.2.0 changed that interface
+              # (added WriteTo), so bumping rardecode alone fails `go build` with
+              # "*rardecode.ReadCloser does not implement rarReader (missing
+              # method WriteTo)" (PR #364). mholt/archives v0.1.5 is the release
+              # built against rardecode v2.2.0 — so the clean fix arrives
+              # automatically once gitleaks upstream adopts archives >=v0.1.5
+              # (which pulls rardecode v2.2.0 itself). Until then, skip the lone
+              # rardecode bump. Matches Chainguard's own pin for this pair.
+              if [ "$IMAGE" = "gitleaks" ] && [[ "$mod_ver" == github.com/nwaples/rardecode/v2@* ]]; then
+                echo "  Skipping incompatible gitleaks module bump: $mod_ver (mholt/archives v0.1.2 needs rardecode <=v2.1.x; resolves when gitleaks adopts archives >=v0.1.5)"
+                continue
+              fi
+              # Apply +incompatible suffix for known modules that need it.
+              mod_path="${mod_ver%@*}"
+              for incompat in "${INCOMPAT_MODULES[@]}"; do
+                if [ "$mod_path" = "$incompat" ] && [[ "$mod_ver" != *"+incompatible" ]]; then
+                  mod_ver="${mod_ver}+incompatible"
+                  echo "  Applied +incompatible suffix: $mod_ver"
+                  break
+                fi
+              done
+              # Verify the version actually exists in the Go module proxy
+              # before generating the patch. Grype's CVE database sometimes
+              # reports fix versions that don't correspond to real upstream
+              # tags (docker/docker v29.3.1 was a recent example — grype said
+              # fix=29.3.1 but the highest docker tag was v28.5.2).
+              # Without this check, the resulting `go get` fails with
+              # "invalid version: unknown revision X.Y.Z" and the whole
+              # melange build is dead. A skip here just means the CVE stays
+              # in the dashboard until grype's data catches up or someone
+              # patches it manually.
+              mod="${mod_ver%@*}"
+              ver="${mod_ver#*@}"
+              # proxy.golang.org requires uppercase chars in the module path to
+              # be `!`-escaped per the Go module proxy spec (golang.org/ref/mod
+              # #module-proxy). Without this, github.com/Azure/go-ntlmssp@v0.1.1
+              # returns 404 and the check skips a real, valid bump — that bug
+              # left 3 patchable CVEs unpatched across gitea/minio/openbao.
+              # `go get` itself accepts the literal path, so only this URL
+              # needs the escape; the rendered `go get` lines below stay raw.
+              mod_lc=$(echo "$mod" | sed 's/\([A-Z]\)/!\L\1/g')
+              if ! curl -fs --max-time 10 "https://proxy.golang.org/${mod_lc}/@v/${ver}.info" >/dev/null 2>&1; then
+                echo "  Skipping ${mod_ver}: version not in Go module proxy"
+                continue
+              fi
+              # Note on tidy reverts: `go get PKG@VER` adds a direct require
+              # that `go mod tidy` then strips if the package is used only
+              # indirectly, silently reverting the bump. `go mod edit -replace`
+              # survives tidy but pins a single module path, which breaks
+              # multi-module families (e.g. go.opentelemetry.io/otel + .../sdk +
+              # .../semconv) when grype reports per-submodule fixes at different
+              # versions. Until the script learns to detect families and harmonize
+              # versions, fall back to `go get` and accept partial coverage on
+              # indirect deps; the multi-modroot fix below is still a real win
+              # for split-module images like etcd.
+              GO_GETS="${GO_GETS} ${mod}@${ver}"
+              APPLIED_COUNT=$((APPLIED_COUNT + 1))
+            done <<< "$FIXES"
+
+            if [ "$APPLIED_COUNT" -eq 0 ]; then
+              # All grype-suggested bumps filtered out (proxy 404, +incompatible
+              # mismatch, etc.). Preserve any existing patch block — same logic
+              # as the empty-FIXES case above.
+              echo "  No compatible auto-patches after image-specific filtering (existing block preserved)"
+              continue
+            fi
+
+            # About to write a new patch block. NOW strip any prior block.
+            if grep -q "# patch-go-deps: auto-generated" "$MELANGE_FILE"; then
+              awk '/# patch-go-deps: auto-generated/{skip=1} /# end-patch-go-deps/{skip=0; next} !skip' \
+                "$MELANGE_FILE" > "${MELANGE_FILE}.tmp" && mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+            fi
+
+            # Create the patch block. Iterate over each modroot so multi-module
+            # monorepos (etcd: server/etcdctl/etcdutl) get every binary patched.
+            # `go mod tidy -e` continues past transitive inconsistencies (single
+            # conflict otherwise aborts the whole tidy — matches Chainguard's
+            # minio approach in chainguard-forks/minio/pull/25).
+            # GOWORK=off keeps single-module commands consistent for repos that
+            # ship a go.work (kubernetes/kubernetes).
+            # Re-add `go mod tidy -e` because dropping it broke 5 images
+            # (loki/coredns/openbao/etcd/victoria-metrics): bumping x/crypto
+            # +x/net without companion x/sys/x/text bumps creates an
+            # inconsistent dep graph that `go mod vendor` rejects.
+            # Trade-off: tidy strips direct requires for packages used only
+            # indirectly, so x/crypto bumps will silently revert for projects
+            # that don't directly import it. Fixing that needs family-aware
+            # bump grouping (golang.org/x/* family at consistent versions) —
+            # see Chainguard's wolfi-dev/os/loki-3.7.yaml for the pattern.
+            # _retry wraps go get with 3 attempts and 5/15/30s backoff to
+            # ride out transient proxy.golang.org HTTP/2 stream errors and
+            # 502s (kubectl x86_64 hit this in run #27361909125). go's own
+            # retry doesn't survive mid-stream INTERNAL_ERROR, and a failed
+            # `go get` aborts the whole melange build.
+            if [ "$IS_TESTKEEP" = true ]; then
+            # Some source compatibility backports need one dependency bump in
+            # place before any other candidate can compile. Probe that floor
+            # first; a later candidate for the same module can still raise it.
+            TESTKEEP_FIRST="${TESTKEEP_SEED[$IMAGE]:-}"
+            if [ -n "$TESTKEEP_FIRST" ]; then
+              # Avoid compiling the same exact floor twice when it is also in
+              # the preserved/generated candidate set. A newer version remains.
+              GO_GETS=" ${GO_GETS} "
+              GO_GETS="${GO_GETS// $TESTKEEP_FIRST / }"
+              GO_GETS="$TESTKEEP_FIRST $GO_GETS"
+            fi
+            # Test-and-keep block: probe each candidate fix against the image's
+            # real build command; keep only those that still compile.
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually (test-and-keep)\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      _pgd_workfix() {  # raise an enclosing go.work above every member's go directive\n        # A go.work whose \`go\` directive sits below a bumped member's requirement\n        # hard-fails every go command in the tree — even under GOWORK=off — before\n        # the build is reached. x/crypto v0.56.0 declares go 1.26.0, which stranded\n        # prometheus (go.work at 1.25.8) and etcd (1.26). Raise the workspace to the\n        # build toolchain first so a bump can never sit above it; the explicit\n        # go.work argument keeps \`go work edit\` working under GOWORK=off. No-op for\n        # the majority of images, which ship no workspace at all.\n        _d=\"\$1\"\n        while [ -n \"\$_d\" ] && [ \"\$_d\" != \"/\" ]; do\n          if [ -f \"\$_d/go.work\" ]; then\n            _gv=\$(go env GOVERSION | sed 's/^go//')\n            echo \"pgd-work: raising \$_d/go.work go directive to \$_gv\"\n            ( cd \"\$_d\" && go work edit -go=\"\$_gv\" go.work ) || true\n            return 0\n          fi\n          _d=\$(dirname \"\$_d\")\n        done\n      }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        _pgd_workfix \"\$root\"\n        ( set -e\n          cd \"\$root\"\n          cp go.mod .pgd-base.mod\n          [ -f go.sum ] && cp go.sum .pgd-base.sum || true\n          # Probe each candidate CVE fix against the real build; keep the ones\n          # that still compile, drop those that need upstream to update its\n          # vendored code first (logged, not silent). Patches everything safely\n          # patchable now instead of skipping the image wholesale.\n          KEPT=\"\"\n          for fix in ${GO_GETS}; do\n            cp .pgd-base.mod go.mod\n            [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true\n            if go get \$KEPT \"\$fix\" >/dev/null 2>&1 && ${TESTKEEP_BUILD[$IMAGE]} >/dev/null 2>&1; then\n              KEPT=\"\$KEPT \$fix\"; echo \"pgd-testkeep KEPT: \$fix\"\n            else\n              echo \"pgd-testkeep dropped (needs upstream): \$fix\"\n            fi\n          done\n          cp .pgd-base.mod go.mod\n          [ -f .pgd-base.sum ] && cp .pgd-base.sum go.sum || true\n          if [ -n \"\$KEPT\" ]; then _retry go get \$KEPT; fi\n          go mod tidy -e\n          rm -f .pgd-base.mod .pgd-base.sum\n          [ ! -d vendor ] || go mod vendor\n        )\n      done\n  # end-patch-go-deps\n"
+            else
+            PATCH_BLOCK="  # patch-go-deps: auto-generated — do not edit manually\n  - runs: |\n      export GOWORK=off\n      _retry() { local i; for i in 5 15 30; do \"\$@\" && return 0; echo \"retry: \$* failed, sleeping \${i}s\"; sleep \$i; done; \"\$@\"; }\n      _pgd_reqs() { awk '\$1==\"require\" && \$2==\"(\" {b=1;next} b && \$1==\")\" {b=0;next} b && index(\$1,\"/\")>0 && substr(\$2,1,1)==\"v\" {print \$1,\$2;next} \$1==\"require\" && NF>=3 && index(\$2,\"/\")>0 && substr(\$3,1,1)==\"v\" {print \$2,\$3}' \"\$1\"; }\n      _pgd_filter() {  # drop pins the module graph already satisfies at >= the pin\n        # grype reports the FIRST fixed version, which for a backported fix sits on\n        # an older minor line than the graph already carries (etcd: grype said\n        # v3.5.33 while external-dns already resolved v3.6.10). Pinning that is a\n        # DOWNGRADE: go either refuses the whole batch (\"requires X@v3.6.4, not\n        # X@v3.5.33\") or accepts it and drags siblings back until the vendored\n        # source stops compiling (loki: dskit CompressionAlgorithm undefined).\n        # Neither is a fix — the module is already past the CVE — so skip it.\n        _keep=\"\"\n        for _mv in \"\$@\"; do\n          _m=\"\${_mv%@*}\"; _v=\"\${_mv##*@}\"\n          _cur=\$(go list -m \"\$_m\" 2>/dev/null | awk '{print \$2}')\n          if [ -n \"\$_cur\" ] && [ \"\$_cur\" != \"\$_v\" ]; then\n            _hi=\$( { echo \"\$_cur\"; echo \"\$_v\"; } | sort -V | tail -1 )\n            if [ \"\$_hi\" = \"\$_cur\" ]; then\n              echo \"pgd-graph: skipping \${_mv} — graph already at \${_cur}\" >&2\n              continue\n            fi\n          fi\n          _keep=\"\${_keep} \${_mv}\"\n        done\n        printf '%s' \"\$_keep\"\n      }\n      _pgd_get() {  # go get, resolving conflicts BETWEEN pins in the same batch\n        # _pgd_filter compares each pin against the graph as it is BEFORE this\n        # batch, so it structurally cannot see a conflict introduced by a SIBLING\n        # pin. Bumping sigstore/fulcio to v1.8.6 raises fulcio own docker/cli\n        # requirement to v29.4.0, which contradicts our docker/cli@v29.2.1 pin,\n        # and go then rejects the whole batch: \"requires X@vHI, not X@vLO\".\n        # Six images failed that way at once (PR #677) and, because the bot opens\n        # one shared PR, they blocked every other image patches too.\n        #\n        # Raise the losing pin to vHI and retry: vHI is above the CVE fix, so the\n        # fix is kept rather than dropped. This only ever raises. A vHI BELOW our\n        # pin would mean satisfying the sibling un-fixes the CVE, so that case\n        # fails loudly instead of silently shipping a downgrade.\n        #\n        # Parsed with parameter expansion, not sed: backslashes are stripped\n        # twice on the way into the melange file (bash double quotes, then\n        # printf %b), so a sed backreference silently arrives empty.\n        _args=\"\$*\"\n        _i=0\n        while :; do\n          _err=\$(go get \$_args 2>&1) && return 0\n          echo \"\$_err\" >&2\n          _line=\$(echo \"\$_err\" | grep -m1 \", not \" || true)\n          [ -n \"\$_line\" ] || return 1\n          _rp=\${_line##*requires }\n          _hp=\${_rp%%,*}\n          _lp=\${_rp##*not }\n          _m=\${_hp%@*}\n          _hi=\${_hp##*@}\n          _lo=\${_lp##*@}\n          [ -n \"\$_m\" ] && [ -n \"\$_hi\" ] || return 1\n          _top=\$( { echo \"\$_lo\"; echo \"\$_hi\"; } | sort -V | tail -1 )\n          if [ \"\$_top\" != \"\$_hi\" ]; then\n            echo \"pgd-conflict: \$_m needs \$_hi but our CVE pin is \$_lo - refusing to downgrade\" >&2\n            return 1\n          fi\n          echo \"pgd-raise: \$_m \$_lo -> \$_hi (required by a sibling pin, still >= the CVE fix)\" >&2\n          _new=\"\"\n          _hit=0\n          for _a in \$_args; do\n            case \"\$_a\" in\n              \"\$_m@\"*) _new=\"\$_new \$_m@\$_hi\"; _hit=1 ;;\n              *) _new=\"\$_new \$_a\" ;;\n            esac\n          done\n          [ \"\$_hit\" = 1 ] || { echo \"pgd-conflict: \$_m is not one of our pins\" >&2; return 1; }\n          _args=\"\$_new\"\n          _i=\$((_i + 1))\n          [ \"\$_i\" -ge 6 ] && return 1\n        done\n      }\n      _pgd_workfix() {  # raise an enclosing go.work above every member's go directive\n        # A go.work whose \`go\` directive sits below a bumped member's requirement\n        # hard-fails every go command in the tree — even under GOWORK=off — before\n        # the build is reached. x/crypto v0.56.0 declares go 1.26.0, which stranded\n        # prometheus (go.work at 1.25.8) and etcd (1.26). Raise the workspace to the\n        # build toolchain first so a bump can never sit above it; the explicit\n        # go.work argument keeps \`go work edit\` working under GOWORK=off. No-op for\n        # the majority of images, which ship no workspace at all.\n        _d=\"\$1\"\n        while [ -n \"\$_d\" ] && [ \"\$_d\" != \"/\" ]; do\n          if [ -f \"\$_d/go.work\" ]; then\n            _gv=\$(go env GOVERSION | sed 's/^go//')\n            echo \"pgd-work: raising \$_d/go.work go directive to \$_gv\"\n            ( cd \"\$_d\" && go work edit -go=\"\$_gv\" go.work ) || true\n            return 0\n          fi\n          _d=\$(dirname \"\$_d\")\n        done\n      }\n      for root in ${MODROOT}; do\n        [ -f \"\$root/go.mod\" ] || continue\n        _pgd_workfix \"\$root\"\n        ( set -e\n          cd \"\$root\"\n          cp go.mod .pgd-orig.mod\n          _PGDA=\$(_pgd_filter${GO_GETS})\n          if [ -n \"\$_PGDA\" ]; then _pgd_get \$_PGDA; fi\n          go mod tidy -e\n          # go mod tidy can downgrade a source-pinned require below what the\n          # source shipped (e.g. a lockstep family like openbao's\n          # go-kms-wrapping transit v2.8.0 -> v2.1.0, which then fails to build\n          # against its core sibling still at v2.8.0). Re-raise any require tidy\n          # dropped below its pre-tidy version. Corrects only upward, so CVE\n          # bumps (>= source) are never undone.\n          _pgd_reqs .pgd-orig.mod > .pgd-o.txt\n          _pgd_reqs go.mod > .pgd-n.txt\n          awk 'NR==FNR{o[\$1]=\$2;next} (\$1 in o) && o[\$1]!=\$2 {print \$1,o[\$1],\$2}' .pgd-o.txt .pgd-n.txt | while read -r p ov cv; do\n            hi=\$( { echo \"\$ov\"; echo \"\$cv\"; } | sort -V | tail -1 )\n            if [ \"\$hi\" = \"\$ov\" ]; then\n              echo \"pgd-guard: restoring \$p: \$cv -> \$ov (tidy downgraded below source pin)\"\n              _retry go get \"\$p@\$ov\"\n            fi\n          done\n          rm -f .pgd-orig.mod .pgd-o.txt .pgd-n.txt\n          [ ! -d vendor ] || go mod vendor\n        )\n      done\n  # end-patch-go-deps\n"
+            fi
+
+            # Find the marker line and insert before it
+            MARKER_LINE=$(grep -n "$MARKER" "$MELANGE_FILE" | head -1 | cut -d: -f1)
+
+            if [ -z "$MARKER_LINE" ]; then
+              echo "  WARN: could not find build marker '$MARKER' in $MELANGE_FILE, skipping"
+              continue
+            fi
+
+            # If the marker is deeply indented (inside a "- runs: |" block),
+            # backtrack to the "- runs:" line so we insert a new pipeline step
+            # before the whole block rather than splitting it.
+            MARKER_INDENT=$(sed -n "${MARKER_LINE}p" "$MELANGE_FILE" | sed 's/[^ ].*//' | wc -c)
+            if [ "$MARKER_INDENT" -gt 4 ]; then
+              RUNS_LINE=$(head -n "$MARKER_LINE" "$MELANGE_FILE" | grep -n "^  - runs:" | tail -1 | cut -d: -f1)
+              if [ -n "$RUNS_LINE" ]; then
+                MARKER_LINE=$RUNS_LINE
+              fi
+            fi
+
+            # Insert patch block before the marker line.
+            # NB: use `printf %b` not `echo -e`. `echo` always appends an
+            # extra trailing newline even when the string already ends in \n,
+            # so each rewrite deposited one blank line between the patch
+            # block and the original marker line. Over ~6h cron cycles that
+            # accumulated visibly (etcd had 54 consecutive blank lines pre-
+            # cleanup in commit 6e82b04). `printf %b` honors the \n escapes
+            # in $PATCH_BLOCK without adding a phantom trailing newline.
+            head -n $((MARKER_LINE - 1)) "$MELANGE_FILE" > "${MELANGE_FILE}.tmp"
+            printf '%b' "$PATCH_BLOCK" >> "${MELANGE_FILE}.tmp"
+            tail -n +${MARKER_LINE} "$MELANGE_FILE" >> "${MELANGE_FILE}.tmp"
+            mv "${MELANGE_FILE}.tmp" "$MELANGE_FILE"
+
+            HAS_PATCHES=true
+            PATCHED_LIST="${PATCHED_LIST} ${IMAGE}"
+            SUMMARY="${SUMMARY}- **${IMAGE}**: ${APPLIED_COUNT} dep(s) bumped\n"
+
+            echo "  Patched $APPLIED_COUNT deps"
+          done
+
+          PATCHED_LIST=$(echo "$PATCHED_LIST" | xargs)
+
+          if [ "$HAS_PATCHES" = true ]; then
+            echo "has_patches=true" >> "$GITHUB_OUTPUT"
+            echo "patched_images=$PATCHED_LIST" >> "$GITHUB_OUTPUT"
+            {
+              echo "summary<<EOF"
+              echo -e "$SUMMARY"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_patches=false" >> "$GITHUB_OUTPUT"
+            echo "No Go dep patches needed"
+          fi
+
+      - name: Close stale patch-go-deps PR
+        if: steps.scan.outputs.has_patches != 'true' && steps.existing-pr.outputs.pr_url != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          PR_URL="${{ steps.existing-pr.outputs.pr_url }}"
+          gh pr close "$PR_URL" \
+            --comment "Closing automatically: the latest patch-go-deps scan produced no supported dependency patch changes."
+          git push origin --delete patch-go-deps || true
+
+      - name: Create PR and enable auto-merge
+        if: steps.scan.outputs.has_patches == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="patch-go-deps"
+          PR_TITLE="fix(go-deps): patch vulnerable transitive dependencies"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Patch generation produced no file changes"
+            exit 0
+          fi
+          git commit -m "fix(go-deps): patch vulnerable transitive dependencies"
+          git push -u origin "$BRANCH" --force
+
+          cat > /tmp/patch-go-deps-pr.md <<'PRBODY'
+          ## Summary
+
+          Scans published Go images with grype, identifies transitive dependencies
+          with known CVE fixes, and adds targeted `go get` commands to each
+          image's melange.yaml.
+
+          ## Patched images
+
+          ${{ steps.scan.outputs.summary }}
+
+          ## Verification
+
+          CI builds all images — if this PR is green, the dep bumps compile correctly.
+
+          ---
+          Auto-generated by [patch-go-deps](${{ github.server_url }}/${{ github.repository }}/actions/workflows/patch-go-deps.yml).
+          PRBODY
+
+          PR_URL="${{ steps.existing-pr.outputs.pr_url }}"
+          if [ -n "$PR_URL" ]; then
+            gh pr edit "$PR_URL" \
+              --title "$PR_TITLE" \
+              --add-label dependencies \
+              --add-label security \
+              --body-file /tmp/patch-go-deps-pr.md
+          else
+            PR_URL=$(gh pr create \
+              --title "$PR_TITLE" \
+              --label dependencies \
+              --label security \
+              --body-file /tmp/patch-go-deps-pr.md)
+          fi
+
+          echo "Created PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
