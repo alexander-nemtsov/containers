@@ -58,7 +58,7 @@ accounts:
 # the container-native path and what this entrypoint assumes.
 #
 # To use a config file instead, mount it and override the command:
-#   docker run -v ./patroni.yml:/etc/patroni.yml minimal-patroni /etc/patroni.yml
+#   docker run -v ./patroni.yml:/etc/patroni.yml containers-patroni /etc/patroni.yml
 #
 # Patroni needs a DCS (etcd / consul / kubernetes) to hold cluster state; a
 # single-node dev cluster can use the built-in raft DCS (pysyncobj is included).
@@ -97,10 +97,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-patroni"
+  org.opencontainers.image.title: "containers-patroni"
   org.opencontainers.image.description: "Hardened shell-less Patroni PostgreSQL high-availability supervisor built on Wolfi with CVE patches on every rebuild"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/patroni"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/patroni"
   org.opencontainers.image.licenses: "MIT"
 
 archs:

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-zookeeper-dev.
+# Smoke test for containers-zookeeper-dev.
 set -eu
 
 : "${IMAGE:?IMAGE env var required}"

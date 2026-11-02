@@ -56,10 +56,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-keycloak"
+  org.opencontainers.image.title: "containers-keycloak"
   org.opencontainers.image.description: "Hardened Keycloak identity and access management server"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/keycloak"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/keycloak"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

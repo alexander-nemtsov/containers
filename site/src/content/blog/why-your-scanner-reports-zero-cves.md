@@ -80,7 +80,7 @@ thing I care about". Ask it directly.
 List what the scanner thinks is installed:
 
 ```
-syft ghcr.io/rtvkiz/minimal-haproxy:latest -o json \
+syft ghcr.io/alexander-nemtsov/containers-haproxy:latest -o json \
   | jq -r '.artifacts[] | "\(.type)\t\(.name)\t\(.version)"' | sort
 ```
 
@@ -110,7 +110,7 @@ scanning pipeline you have not verified before.
 
 Every package we build carries the name upstream uses — `haproxy`, `nginx`,
 `redis`, `postgresql` — never a decorated variant. The image is called
-`minimal-haproxy`; the *package* inside it is `haproxy`. Those are different
+`containers-haproxy`; the *package* inside it is `haproxy`. Those are different
 namespaces and only one of them is load-bearing for scanners.
 
 That rule is enforced by a check that runs on every pull request, not by

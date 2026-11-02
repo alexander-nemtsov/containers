@@ -1,4 +1,4 @@
-# Development variant of minimal-tempo.
+# Development variant of containers-tempo.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -50,10 +50,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-tempo-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-tempo: same Tempo + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/tempo"
+  org.opencontainers.image.title: "containers-tempo-dev"
+  org.opencontainers.image.description: "Dev variant of containers-tempo: same Tempo + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/tempo"
   org.opencontainers.image.licenses: "AGPL-3.0-only"
   dev.minimal.variant: "dev"
 

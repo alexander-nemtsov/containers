@@ -1,6 +1,6 @@
-# Development variant of minimal-go.
+# Development variant of containers-go.
 #
-# Note: minimal-go's prod image already includes the GCC toolchain, git,
+# Note: containers-go's prod image already includes the GCC toolchain, git,
 # and most build deps because Go itself needs them. The dev variant adds
 # only what's missing for interactive debugging:
 #   - shell (busybox + bash)
@@ -116,10 +116,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-go-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-go: same Go toolchain + shell + openssh-client for private module fetching. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/go"
+  org.opencontainers.image.title: "containers-go-dev"
+  org.opencontainers.image.description: "Dev variant of containers-go: same Go toolchain + shell + openssh-client for private module fetching. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/go"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

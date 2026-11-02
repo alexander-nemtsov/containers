@@ -320,7 +320,7 @@ jobs:
 
   #----------------------------------------------------------------------------
   # CATALOG DRIFT CHECK
-  # The minimalcontainers.com site is generated from catalog.json, which must
+  # The catalog.nexaflow.by site is generated from catalog.json, which must
   # list exactly the images this workflow builds. Fail fast if they drift.
   #----------------------------------------------------------------------------
   validate-catalog:
@@ -353,7 +353,7 @@ jobs:
         run: make check-autoupdate
 
       - name: Assert the website's factual claims still hold
-        # Invariant: nothing on minimalcontainers.com contradicts this repo, and
+        # Invariant: nothing on catalog.nexaflow.by contradicts this repo, and
         # no retracted claim comes back. A page renders identically whether its
         # numbers are right or wrong, so nothing failed when /about kept saying
         # Docker Hardened had "Hundreds" of images months after Docker released
@@ -617,18 +617,18 @@ jobs:
           retry_wait_seconds: 30
           command: |
             apko build ${{ matrix.apko_config }} \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
               ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
               --arch x86_64
             docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
-            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
-            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
+            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "containers-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
+            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
 
       - name: Report image size
         run: |
           echo "## ${{ matrix.name }}${{ matrix.tag_suffix }} Image Size" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" >> $GITHUB_STEP_SUMMARY || true
+            grep "containers-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" >> $GITHUB_STEP_SUMMARY || true
 
       # CVE scan: prod variants only. Dev variants intentionally ship a larger
       # surface (shell, compilers, etc.) and are not tracked on the dashboard.
@@ -693,7 +693,7 @@ jobs:
         env:
           GRYPE_DB_AUTO_UPDATE: "false"
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" \
             -o json=grype-${{ matrix.name }}.json \
             -o sarif=grype-${{ matrix.name }}.sarif
@@ -704,7 +704,7 @@ jobs:
           # Sidecar JSON consumed by tools/dashboard/build.sh — drives the
           # Size, Built-ago, raw vs VEX-effective CVE columns, and digest
           # on the published CVE dashboard.
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}"
           SIZE_BYTES=$(docker image inspect "$IMAGE" --format '{{.Size}}' 2>/dev/null || echo 0)
           DIGEST=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's|.*@||')
           BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -854,7 +854,7 @@ jobs:
           # Header
           echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** minimal-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** containers-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Summary table
@@ -954,7 +954,7 @@ jobs:
 
       - name: Test image
         run: |
-          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
+          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
           bash ./${{ matrix.test_script }}
 
       - name: Publish image
@@ -974,7 +974,7 @@ jobs:
           # exact patch (frozen, including security fixes). Same digest.
           # shellcheck source=.github/scripts/version-ladder.sh
           . ./.github/scripts/version-ladder.sh
-          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}"
+          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}"
           VER="${{ steps.version.outputs.tag }}"
           SUF="${{ matrix.tag_suffix }}"
 
@@ -1013,7 +1013,7 @@ jobs:
             exit 1
           fi
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
-          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -1083,7 +1083,7 @@ jobs:
                 # if the attestation is actually there; otherwise leave RC
                 # non-zero so the retry re-attests.
                 if cosign verify-attestation --type spdxjson \
-                     --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+                     --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
                      --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
                      "${{ steps.publish.outputs.image }}" > /dev/null 2>&1; then
                   echo "note: rekor conflict for ${SBOM}, attestation is present in the registry — treating as success"
@@ -1120,7 +1120,7 @@ jobs:
         continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
@@ -1140,7 +1140,7 @@ jobs:
         if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
@@ -1152,7 +1152,7 @@ jobs:
         if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
@@ -1179,12 +1179,12 @@ jobs:
             IMAGE="${{ steps.publish.outputs.image }}"
             echo "Verifying cosign signature..."
             cosign verify \
-              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
               --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
               "$IMAGE" > /dev/null
             echo "Verifying SBOM attestation..."
             cosign verify-attestation --type spdxjson \
-              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
               --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
               "$IMAGE" > /dev/null
             echo "Verifying SLSA provenance..."
@@ -1360,20 +1360,20 @@ jobs:
           retry_wait_seconds: 30
           command: |
             apko build ${{ matrix.apko_config }} \
-              ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }} \
               ${{ matrix.name }}${{ matrix.tag_suffix }}.tar \
               --arch x86_64 \
               --repository-append ./packages \
               --keyring-append ./melange.rsa.pub
             docker load < ${{ matrix.name }}${{ matrix.tag_suffix }}.tar
-            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
-            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
+            LOADED_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "containers-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" | head -1)
+            docker tag "$LOADED_IMAGE" ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}
 
       - name: Report image size
         run: |
           echo "## ${{ matrix.name }}${{ matrix.tag_suffix }} Image Size" >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-            grep "minimal-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" >> $GITHUB_STEP_SUMMARY || true
+            grep "containers-${{ matrix.name }}" | grep "${{ github.sha }}${{ matrix.tag_suffix }}" >> $GITHUB_STEP_SUMMARY || true
 
       # CVE scan: prod variants only. Dev variants intentionally ship a larger
       # surface (shell, compilers, etc.) and are not tracked on the dashboard.
@@ -1438,7 +1438,7 @@ jobs:
         env:
           GRYPE_DB_AUTO_UPDATE: "false"
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}"
           grype "$IMAGE" \
             -o json=grype-${{ matrix.name }}.json \
             -o sarif=grype-${{ matrix.name }}.sarif
@@ -1449,7 +1449,7 @@ jobs:
           # Sidecar JSON consumed by tools/dashboard/build.sh — drives the
           # Size, Built-ago, raw vs VEX-effective CVE columns, and digest
           # on the published CVE dashboard.
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}"
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}"
           SIZE_BYTES=$(docker image inspect "$IMAGE" --format '{{.Size}}' 2>/dev/null || echo 0)
           DIGEST=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's|.*@||')
           BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -1599,7 +1599,7 @@ jobs:
           # Header
           echo "## Security Scan: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** minimal-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan date:** $(date -u +%Y-%m-%d) | **Image:** containers-${{ matrix.name }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Summary table
@@ -1687,7 +1687,7 @@ jobs:
 
       - name: Test image
         run: |
-          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
+          export IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}:${{ github.sha }}${{ matrix.tag_suffix }}"
           bash ./${{ matrix.test_script }}
 
       - name: Publish image
@@ -1705,7 +1705,7 @@ jobs:
           # Rolling major/minor tags — see the matching comment in build-apko.
           # shellcheck source=.github/scripts/version-ladder.sh
           . ./.github/scripts/version-ladder.sh
-          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}"
+          IMAGE_REF="${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}"
           VER="${{ steps.version.outputs.tag }}"
           SUF="${{ matrix.tag_suffix }}"
 
@@ -1745,7 +1745,7 @@ jobs:
             exit 1
           fi
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
-          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}@${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Sign image with cosign
         if: github.event_name != 'pull_request'
@@ -1801,7 +1801,7 @@ jobs:
                 # if the attestation is actually there; otherwise leave RC
                 # non-zero so the retry re-attests.
                 if cosign verify-attestation --type spdxjson \
-                     --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+                     --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
                      --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
                      "${{ steps.publish.outputs.image }}" > /dev/null 2>&1; then
                   echo "note: rekor conflict for ${SBOM}, attestation is present in the registry — treating as success"
@@ -1833,7 +1833,7 @@ jobs:
         continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
@@ -1853,7 +1853,7 @@ jobs:
         if: github.event_name != 'pull_request' && steps.slsa-provenance.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
@@ -1865,7 +1865,7 @@ jobs:
         if: github.event_name != 'pull_request' && steps.slsa-retry.outcome == 'failure'
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/minimal-${{ matrix.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/containers-${{ matrix.name }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
 
@@ -1884,12 +1884,12 @@ jobs:
             IMAGE="${{ steps.publish.outputs.image }}"
             echo "Verifying cosign signature..."
             cosign verify \
-              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
               --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
               "$IMAGE" > /dev/null
             echo "Verifying SBOM attestation..."
             cosign verify-attestation --type spdxjson \
-              --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+              --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
               --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
               "$IMAGE" > /dev/null
             echo "Verifying SLSA provenance..."
@@ -1949,7 +1949,7 @@ jobs:
           fi
           echo "All expected builds succeeded!"
 
-  # NOTE: the catalog site (minimalcontainers.com) is built and deployed by a
+  # NOTE: the catalog site (catalog.nexaflow.by) is built and deployed by a
   # separate workflow, .github/workflows/deploy-site.yml, which runs after this
   # workflow completes (workflow_run) and reuses the scan/SBOM artifacts uploaded
   # by the build jobs above. Deploy is decoupled from the image build so site

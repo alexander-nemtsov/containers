@@ -26,9 +26,9 @@ want to know early — is the binary there, what version is it, does it parse th
 config — needs no shell at all:
 
 ```
-docker run --rm --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest -vv
+docker run --rm --entrypoint /usr/bin/haproxy ghcr.io/alexander-nemtsov/containers-haproxy:latest -vv
 docker run --rm -v "$PWD/haproxy.cfg:/etc/haproxy/haproxy.cfg:ro" \
-  --entrypoint /usr/bin/haproxy ghcr.io/rtvkiz/minimal-haproxy:latest \
+  --entrypoint /usr/bin/haproxy ghcr.io/alexander-nemtsov/containers-haproxy:latest \
   -c -f /etc/haproxy/haproxy.cfg
 ```
 
@@ -41,7 +41,7 @@ You do not need to be inside a container to read its filesystem.
 
 ```
 # what is actually in the image, without running it
-docker create --name tmp ghcr.io/rtvkiz/minimal-nginx:latest
+docker create --name tmp ghcr.io/alexander-nemtsov/containers-nginx:latest
 docker export tmp | tar -tv | head -50
 docker cp tmp:/etc/nginx/nginx.conf ./nginx.conf
 docker rm tmp
@@ -94,7 +94,7 @@ Every image we publish has a `-dev` tag carrying the same primary binary plus a
 shell and the usual tools — `bash`, `curl`, `openssl`, `dig`, `jq`, `git`, `apk`:
 
 ```
-docker run --rm -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-nginx:latest-dev
+docker run --rm -it --entrypoint /bin/bash ghcr.io/alexander-nemtsov/containers-nginx:latest-dev
 ```
 
 Swap the tag, reproduce the problem, keep everything else identical. Because

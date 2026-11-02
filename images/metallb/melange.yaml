@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-metallb
+# Melange build configuration for containers-metallb
 # MetalLB bare-metal load balancer, controller and speaker.
 
 package:

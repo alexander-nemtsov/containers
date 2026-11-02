@@ -1,4 +1,4 @@
-# Development variant of minimal-argo-cd-repo-server.
+# Development variant of containers-argo-cd-repo-server.
 # Same repo-server package from prod, plus bash and debugging tools.
 # In-house composition (no public Chainguard argo-cd-repo-server-dev reference).
 
@@ -54,10 +54,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-argo-cd-repo-server-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-argo-cd-repo-server: same package + shell + debugging tools. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/argo-cd-repo-server"
+  org.opencontainers.image.title: "containers-argo-cd-repo-server-dev"
+  org.opencontainers.image.description: "Dev variant of containers-argo-cd-repo-server: same package + shell + debugging tools. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/argo-cd-repo-server"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

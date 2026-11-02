@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-pulsar-dev.
+# Smoke test for containers-pulsar-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

@@ -1,4 +1,4 @@
-# Development variant of minimal-jaeger.
+# Development variant of containers-jaeger.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -53,10 +53,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-jaeger-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-jaeger: same jaeger + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/jaeger"
+  org.opencontainers.image.title: "containers-jaeger-dev"
+  org.opencontainers.image.description: "Dev variant of containers-jaeger: same jaeger + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/jaeger"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

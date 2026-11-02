@@ -148,10 +148,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-go"
+  org.opencontainers.image.title: "containers-go"
   org.opencontainers.image.description: "Hardened Go builder image built on Wolfi with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/go"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/go"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

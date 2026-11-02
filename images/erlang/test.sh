@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-erlang (prod).
+# Smoke test for containers-erlang (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

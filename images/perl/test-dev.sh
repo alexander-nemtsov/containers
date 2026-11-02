@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-perl-dev.
+# Smoke test for containers-perl-dev.
 # Same functional checks as prod, PLUS: a shell IS present, the C toolchain can
 # build an XS module, and cpanminus is installed.
 set -eu

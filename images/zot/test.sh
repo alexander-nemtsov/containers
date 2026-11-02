@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-zot (prod).
+# Smoke test for containers-zot (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

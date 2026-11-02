@@ -21,8 +21,8 @@ const schema = [{
   datePublished: post.data.published,
   dateModified: post.data.updated ?? post.data.published,
   url: new URL(`/blog/${post.id}`, Astro.site).href,
-  author: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
-  publisher: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  author: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://catalog.nexaflow.by' },
+  publisher: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://catalog.nexaflow.by' },
 }];
 ---
 <Layout

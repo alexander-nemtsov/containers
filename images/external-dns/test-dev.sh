@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-external-dns-dev.
+# Smoke test for containers-external-dns-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

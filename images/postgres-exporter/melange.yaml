@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-postgres-exporter
+# Melange build configuration for containers-postgres-exporter
 # Prometheus PostgreSQL exporter built from source via melange.
 
 package:

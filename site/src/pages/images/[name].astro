@@ -5,7 +5,7 @@ import SeverityBar from '../../components/SeverityBar.astro';
 import { images, getImage, categorySlug, imageTitle, imageHref } from '../../lib/catalog';
 
 export function getStaticPaths() {
-  // Addressed by `slug`, not `name`: three images publish as minimal-<x>-slim but
+  // Addressed by `slug`, not `name`: three images publish as containers-<x>-slim but
   // must live at /images/<x>/ to match what people search. See lib/catalog.ts.
   return images.map((img) => ({ params: { name: img.slug }, props: { image: img } }));
 }
@@ -34,7 +34,7 @@ const sevOrder = ['critical', 'high', 'medium', 'low'] as const;
 // so it is padded with the facts that differ per image. The gate means this
 // path should not be reached in a normal build.
 const pageTitle = imageTitle(image);
-const pullRef = prod?.pullRef ?? `ghcr.io/rtvkiz/minimal-${image.name}`;
+const pullRef = prod?.pullRef ?? `ghcr.io/alexander-nemtsov/containers-${image.name}`;
 const pageDescription =
   image.description?.trim() ||
   [
@@ -53,7 +53,7 @@ const siblings = images
 const schema = [{
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: `minimal-${image.name}`,
+  name: `containers-${image.name}`,
   applicationCategory: 'DeveloperApplication',
   description: image.summary,
   operatingSystem: 'Linux',
@@ -65,7 +65,7 @@ const schema = [{
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   ...(prod?.specs?.archs?.length ? { processorRequirements: prod.specs.archs.join(', ') } : {}),
   ...(image.builtAt ? { dateModified: image.builtAt } : {}),
-  maintainer: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  maintainer: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://catalog.nexaflow.by' },
 }];
 ---
 <Layout
@@ -87,8 +87,8 @@ const schema = [{
         {prod?.specs?.uid != null && <span><b>User</b> {prod.specs.user}</span>}
         {image.updatedAgo && <span><b>Updated</b> {image.updatedAgo}</span>}
         {/* The registry name outlives the page name: these three publish as
-            minimal-<x>-slim, so say so rather than let the pull ref surprise. */}
-        {image.slug !== image.name && <span><b>Publishes as</b> <code class="kv-mono">minimal-{image.name}</code></span>}
+            containers-<x>-slim, so say so rather than let the pull ref surprise. */}
+        {image.slug !== image.name && <span><b>Publishes as</b> <code class="kv-mono">containers-{image.name}</code></span>}
         {image.upstreamUrl && <span><b>Upstream</b> <a href={image.upstreamUrl} rel="noopener">{image.upstreamUrl.replace(/^https?:\/\//, '')}</a></span>}
       </div>
     </div>
@@ -287,15 +287,15 @@ const schema = [{
     <div class="tabpanel" data-panel="provenance">
       <p class="section-sub">Everything is verifiable without an account. Copy and run:</p>
       <h3 style="font-size:1rem;margin:20px 0 8px">Build provenance (SLSA v1.0, Build L2)</h3>
-      <CopyButton code={`gh attestation verify oci://${image.repo}:latest --owner rtvkiz`} />
+      <CopyButton code={`gh attestation verify oci://${image.repo}:latest --owner alexander-nemtsov`} />
       <h3 style="font-size:1rem;margin:24px 0 8px">Cosign signature</h3>
       <CopyButton code={`cosign verify \\
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \\
+  --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \\
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\
   ${image.repo}:latest`} />
       <h3 style="font-size:1rem;margin:24px 0 8px">SBOM attestation (SPDX)</h3>
       <CopyButton code={`cosign verify-attestation --type spdxjson \\
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \\
+  --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \\
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\
   ${image.repo}:latest \\
   | jq -r '.payload | @base64d | fromjson | .predicate'`} />

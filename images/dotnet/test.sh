@@ -1,5 +1,5 @@
 #!/bin/sh
-# Test script for minimal-dotnet image
+# Test script for containers-dotnet image
 # Requires IMAGE environment variable to be set
 
 set -e

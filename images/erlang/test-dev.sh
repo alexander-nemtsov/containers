@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-erlang-dev.
+# Smoke test for containers-erlang-dev.
 # Same functional checks as prod, PLUS: bash IS present, the C toolchain can
 # build a NIF, and rebar3 is installed.
 set -eu

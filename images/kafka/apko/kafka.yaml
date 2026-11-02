@@ -69,10 +69,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-kafka"
+  org.opencontainers.image.title: "containers-kafka"
   org.opencontainers.image.description: "Hardened Apache Kafka image with custom jlink JRE, KRaft mode, daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kafka"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kafka"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

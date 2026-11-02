@@ -1,4 +1,4 @@
-# Development variant of minimal-cmctl.
+# Development variant of containers-cmctl.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -36,10 +36,10 @@ environment:
   HOME: /tmp
 
 annotations:
-  org.opencontainers.image.title: "minimal-cmctl-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-cmctl: same cmctl + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/cmctl"
+  org.opencontainers.image.title: "containers-cmctl-dev"
+  org.opencontainers.image.description: "Dev variant of containers-cmctl: same cmctl + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/cmctl"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

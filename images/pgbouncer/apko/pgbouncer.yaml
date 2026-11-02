@@ -59,10 +59,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-pgbouncer"
+  org.opencontainers.image.title: "containers-pgbouncer"
   org.opencontainers.image.description: "Hardened shell-less PgBouncer PostgreSQL connection pooler built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/pgbouncer"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/pgbouncer"
   org.opencontainers.image.licenses: "ISC"
 
 archs:

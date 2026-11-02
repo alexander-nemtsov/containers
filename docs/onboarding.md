@@ -6,8 +6,10 @@ its version, get its transitive CVEs patched (or be a documented exception), and
 appear on the catalog site — with nothing silently skipped.
 
 > `CONTRIBUTING.md` is the friendly intro. **This file is the source of truth.**
-> When they disagree, this file wins. Two related deep-dives:
-> [`version-management.md`](version-management.md) (the two-loop update model) and
+> When they disagree, this file wins. Three related deep-dives:
+> [`version-management.md`](version-management.md) (the two-loop update model),
+> [`build-pipeline.md`](build-pipeline.md) (the CI machinery end to end — read it
+> before touching `.github/**`), and
 > [`dev-variants/CONVENTIONS.md`](dev-variants/CONVENTIONS.md) (the `-dev` image).
 >
 > **What to onboard next:** [`roadmap.md`](roadmap.md) — the demand-ranked road to 100.
@@ -122,10 +124,10 @@ paths:
   - { path: /tmp, type: directory, uid: 65532, gid: 65532, permissions: 0o1777 }
 
 annotations:
-  org.opencontainers.image.title: "minimal-<name>"
+  org.opencontainers.image.title: "containers-<name>"
   org.opencontainers.image.description: "Hardened shell-less <Name> ..."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/<name>"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/<name>"
   org.opencontainers.image.licenses: "<SPDX id>"
 
 archs: [x86_64, aarch64]
@@ -248,7 +250,7 @@ fallback and are fully blind.
 - Name the package exactly what upstream calls it (`redis`, `haproxy`, `nginx`).
 - Add `dependencies.provider-priority: 100` whenever Wolfi ships a package of the
   same name, so apk cannot substitute Wolfi's build for ours on a version bump.
-- The image name stays `minimal-<name>` — this is the *apk package* name only, and
+- The image name stays `containers-<name>` — this is the *apk package* name only, and
   it must match in `melange.yaml`, `apko/<name>.yaml`, and `apko/<name>-dev.yaml`.
 
 **Migration complete, and now enforced.** Every melange-built image in
@@ -335,7 +337,7 @@ round-trip), and **no-shell**.
 # renaming: <name>-melange (melange build), <name> (apko assemble + docker load + tag)
 # test target
 test-<name>:
-	@export IMAGE="$(REGISTRY)/$(OWNER)/minimal-<name>:latest" && images/<name>/test.sh
+	@export IMAGE="$(REGISTRY)/$(OWNER)/containers-<name>:latest" && images/<name>/test.sh
 ```
 
 apko-only images skip the `-melange` target (there's no melange build).
@@ -397,8 +399,8 @@ Every image gets one. Start empty:
 ```json
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/rtvkiz/minimal/vex/<name>",
-  "author": "rtvkiz",
+  "@id": "https://github.com/alexander-nemtsov/containers/vex/<name>",
+  "author": "alexander-nemtsov",
   "timestamp": "<UTC ISO8601>",
   "version": 1,
   "tooling": "tools/vex/validate.sh",

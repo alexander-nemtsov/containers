@@ -13,7 +13,7 @@ docker run --rm --entrypoint /usr/bin/git "$IMAGE" --version
 
 echo "Testing simple Go program..."
 TMPFILE=$(mktemp /tmp/test.XXXXXX.go)
-echo 'package main; import "fmt"; func main() { fmt.Println("Hello from minimal-go") }' > "$TMPFILE"
+echo 'package main; import "fmt"; func main() { fmt.Println("Hello from containers-go") }' > "$TMPFILE"
 docker run --rm -v "$TMPFILE":/app/test.go -w /app "$IMAGE" run test.go || echo "Note: Go run test completed"
 rm -f "$TMPFILE"
 

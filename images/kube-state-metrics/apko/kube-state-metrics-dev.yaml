@@ -1,4 +1,4 @@
-# Development variant of minimal-kube-state-metrics.
+# Development variant of containers-kube-state-metrics.
 # Same binary from prod, plus a shell and the HTTP/JSON tools needed to inspect
 # the metrics and telemetry endpoints from inside the pod.
 #
@@ -58,10 +58,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-kube-state-metrics-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-kube-state-metrics: same binary + shell, curl/jq/openssl and dig. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kube-state-metrics"
+  org.opencontainers.image.title: "containers-kube-state-metrics-dev"
+  org.opencontainers.image.description: "Dev variant of containers-kube-state-metrics: same binary + shell, curl/jq/openssl and dig. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kube-state-metrics"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

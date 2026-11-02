@@ -58,10 +58,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-dnsmasq"
+  org.opencontainers.image.title: "containers-dnsmasq"
   org.opencontainers.image.description: "Hardened shell-less dnsmasq DNS forwarder/cache and DHCP server built on Wolfi with CVE patches on every rebuild"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/dnsmasq"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/dnsmasq"
   org.opencontainers.image.licenses: "GPL-2.0-or-later"
 
 archs:

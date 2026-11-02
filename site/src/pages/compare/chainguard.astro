@@ -20,7 +20,7 @@ const datasetSchema = {
   url: new URL('/compare', Astro.site).href,
   license: 'https://spdx.org/licenses/MIT.html',
   isAccessibleForFree: true,
-  creator: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://minimalcontainers.com' },
+  creator: { '@type': 'Organization', name: 'Minimal Containers', url: 'https://catalog.nexaflow.by' },
   dateCreated: data.scanDate,
   measurementTechnique: `${data.scanner}, vulnerability DB schema ${data.dbSchema}, platform ${data.platform}`,
   variableMeasured: 'Unique CVE identifiers per container image',
@@ -104,8 +104,8 @@ const datasetSchema = {
       </p>
 
       <h2 class="section-title" style="margin-top:44px">Trying it</h2>
-      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest
-grype ghcr.io/rtvkiz/minimal-python:latest`} />
+      <CopyButton code={`docker pull ghcr.io/alexander-nemtsov/containers-python:latest
+grype ghcr.io/alexander-nemtsov/containers-python:latest`} />
 
       <CompareMethod data={data} />
     </div>

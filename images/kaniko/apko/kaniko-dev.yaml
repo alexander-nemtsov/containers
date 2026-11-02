@@ -1,4 +1,4 @@
-# Development variant of minimal-kaniko.
+# Development variant of containers-kaniko.
 # Same source-built executor as prod, plus a shell and debugging tools.
 # Runs as root (same as prod — kaniko requires it). Not for production.
 
@@ -49,10 +49,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-kaniko-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-kaniko: same executor + shell + curl/openssl/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kaniko"
+  org.opencontainers.image.title: "containers-kaniko-dev"
+  org.opencontainers.image.description: "Dev variant of containers-kaniko: same executor + shell + curl/openssl/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kaniko"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

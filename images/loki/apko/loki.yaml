@@ -41,10 +41,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-loki"
+  org.opencontainers.image.title: "containers-loki"
   org.opencontainers.image.description: "Hardened Loki log aggregation server built from source"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/loki"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/loki"
   org.opencontainers.image.licenses: "AGPL-3.0"
 
 archs:

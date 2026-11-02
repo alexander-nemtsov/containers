@@ -1,4 +1,4 @@
-# Development variant of minimal-dnsmasq.
+# Development variant of containers-dnsmasq.
 # Same dnsmasq from prod, plus a shell and DNS troubleshooting tools
 # (dig/nslookup) for working out why a query is not being answered.
 #
@@ -60,10 +60,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-dnsmasq-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-dnsmasq: same dnsmasq + shell and dig/nslookup. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/dnsmasq"
+  org.opencontainers.image.title: "containers-dnsmasq-dev"
+  org.opencontainers.image.description: "Dev variant of containers-dnsmasq: same dnsmasq + shell and dig/nslookup. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/dnsmasq"
   org.opencontainers.image.licenses: "GPL-2.0-or-later"
   dev.minimal.variant: "dev"
 

@@ -1,4 +1,4 @@
-# Development variant of minimal-kong.
+# Development variant of containers-kong.
 # Same Kong from prod, plus bash, apk-tools, curl and jq for debugging.
 # In-house composition (no public Chainguard kong-dev reference).
 
@@ -64,10 +64,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-kong-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-kong: same Kong + shell, curl, jq for debugging. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kong"
+  org.opencontainers.image.title: "containers-kong-dev"
+  org.opencontainers.image.description: "Dev variant of containers-kong: same Kong + shell, curl, jq for debugging. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kong"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

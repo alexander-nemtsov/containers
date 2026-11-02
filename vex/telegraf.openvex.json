@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/rtvkiz/minimal/vex/telegraf",
-  "author": "rtvkiz",
+  "@id": "https://github.com/alexander-nemtsov/containers/vex/telegraf",
+  "author": "alexander-nemtsov",
   "timestamp": "2026-06-27T00:00:00Z",
   "version": 3,
   "tooling": "tools/vex/validate.sh",
@@ -9,7 +9,7 @@
     {
       "vulnerability": { "name": "GHSA-25qr-6mpr-f7qx" },
       "products": [
-        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
+        { "@id": "pkg:oci/containers-telegraf?repository_url=ghcr.io/alexander-nemtsov" }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -18,7 +18,7 @@
     {
       "vulnerability": { "name": "GHSA-jfwf-28xr-xw6q" },
       "products": [
-        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
+        { "@id": "pkg:oci/containers-telegraf?repository_url=ghcr.io/alexander-nemtsov" }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -27,7 +27,7 @@
     {
       "vulnerability": { "name": "GHSA-qw24-gh76-8rvv" },
       "products": [
-        { "@id": "pkg:oci/minimal-telegraf?repository_url=ghcr.io/rtvkiz" }
+        { "@id": "pkg:oci/containers-telegraf?repository_url=ghcr.io/alexander-nemtsov" }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",

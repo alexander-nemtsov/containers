@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kubectl-dev.
+# Smoke test for containers-kubectl-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"
@@ -23,4 +23,4 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c "curl --version >/dev/null && j
 echo "Testing bind-tools (dig)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "dig -v" 2>&1 | grep -qE "^DiG"
 
-echo "All minimal-kubectl-dev smoke tests passed"
+echo "All containers-kubectl-dev smoke tests passed"

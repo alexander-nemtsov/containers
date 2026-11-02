@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-external-secrets
+# Melange build configuration for containers-external-secrets
 # External Secrets Operator built from source via melange.
 
 package:

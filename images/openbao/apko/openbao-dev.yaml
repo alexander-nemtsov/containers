@@ -1,4 +1,4 @@
-# Development variant of minimal-openbao.
+# Development variant of containers-openbao.
 # Same source-built bao + ca-certs, plus shell + curl/openssl/dig/jq
 # (essential for Vault/Bao API interaction).
 
@@ -64,10 +64,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-openbao-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-openbao: same OpenBao + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/openbao"
+  org.opencontainers.image.title: "containers-openbao-dev"
+  org.opencontainers.image.description: "Dev variant of containers-openbao: same OpenBao + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/openbao"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

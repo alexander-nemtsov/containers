@@ -1,6 +1,6 @@
 # Dev variant conventions
 
-This document defines what every `minimal-<image>:latest-dev` image looks like.
+This document defines what every `containers-<image>:latest-dev` image looks like.
 Every dev variant in this repo follows these rules; the per-category
 templates in `./templates/` apply them to concrete `apko` configs.
 
@@ -61,8 +61,8 @@ invokes `/bin/sh -c` and ignores the entrypoint — so multi-stage build
 works untouched. Interactive shell access requires `--entrypoint`:
 
 ```bash
-docker run -it --entrypoint /bin/sh   ghcr.io/rtvkiz/minimal-<image>:latest-dev
-docker run -it --entrypoint /bin/bash ghcr.io/rtvkiz/minimal-<image>:latest-dev
+docker run -it --entrypoint /bin/sh   ghcr.io/alexander-nemtsov/containers-<image>:latest-dev
+docker run -it --entrypoint /bin/bash ghcr.io/alexander-nemtsov/containers-<image>:latest-dev
 ```
 
 Document this in each image's README dev variant section.

@@ -9,7 +9,7 @@ docker run --rm "$IMAGE" version 2>&1 | grep -qiE '1\.[0-9]' \
 echo "Testing notation help (subcommands load)..."
 docker run --rm "$IMAGE" --help 2>&1 | grep -qiE '[a-z]'
 echo "Testing notation cert generate-test (offline)..."
-docker run --rm "$IMAGE" cert generate-test "minimal-test" >/dev/null 2>&1 && echo "notation generated a test cert OK"
+docker run --rm "$IMAGE" cert generate-test "containers-test" >/dev/null 2>&1 && echo "notation generated a test cert OK"
 
 echo "Verifying no shell..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "echo fail" 2>/dev/null \

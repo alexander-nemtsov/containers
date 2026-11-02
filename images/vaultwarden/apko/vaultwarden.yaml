@@ -54,10 +54,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-vaultwarden"
+  org.opencontainers.image.title: "containers-vaultwarden"
   org.opencontainers.image.description: "Hardened shell-less Vaultwarden (Bitwarden-compatible server) built from source via melange"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vaultwarden"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/vaultwarden"
   # The server is AGPL-3.0; the bundled web vault is Bitwarden's OSS (GPL-3.0)
   # build. Both ship in this image, so both are declared.
   org.opencontainers.image.licenses: "AGPL-3.0-only AND GPL-3.0-only"

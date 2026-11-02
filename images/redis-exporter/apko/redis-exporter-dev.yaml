@@ -1,4 +1,4 @@
-# Development variant of minimal-redis-exporter.
+# Development variant of containers-redis-exporter.
 # Same binary from prod, plus a shell, a redis client and the HTTP/JSON tools
 # needed to work out why a scrape reports up=0.
 #
@@ -61,10 +61,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-redis-exporter-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-redis-exporter: same binary + shell, valkey-cli, curl/jq/openssl and dig. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/redis-exporter"
+  org.opencontainers.image.title: "containers-redis-exporter-dev"
+  org.opencontainers.image.description: "Dev variant of containers-redis-exporter: same binary + shell, valkey-cli, curl/jq/openssl and dig. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/redis-exporter"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

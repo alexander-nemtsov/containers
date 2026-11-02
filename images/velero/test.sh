@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-velero (prod).
+# Smoke test for containers-velero (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

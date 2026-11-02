@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-unbound-dev.
+# Smoke test for containers-unbound-dev.
 # Boots the resolver, then does a fully self-contained DNS round-trip using the
 # image's OWN dig (dev ships bind-tools) against the local-data health record.
 set -eu

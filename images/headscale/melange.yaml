@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-headscale
+# Melange build configuration for containers-headscale
 # Headscale self-hosted Tailscale control server, from source.
 
 package:

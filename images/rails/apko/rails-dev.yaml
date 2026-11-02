@@ -1,4 +1,4 @@
-# Development variant of minimal-rails.
+# Development variant of containers-rails.
 # Same Rails 8 + Ruby 4.0 runtime as prod (bundler already included),
 # plus shell, apk-tools, gcc toolchain for native gems, git, and Node.js
 # for the Rails asset pipeline (jsbundling-rails, cssbundling-rails).
@@ -129,10 +129,10 @@ paths:
     recursive: true
 
 annotations:
-  org.opencontainers.image.title: "minimal-rails-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-rails: same Rails + Ruby + bundler runtime + shell + build toolchain + Node.js for assets. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rails"
+  org.opencontainers.image.title: "containers-rails-dev"
+  org.opencontainers.image.description: "Dev variant of containers-rails: same Rails + Ruby + bundler runtime + shell + build toolchain + Node.js for assets. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/rails"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

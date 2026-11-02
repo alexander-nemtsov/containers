@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-patroni-dev.
+# Smoke test for containers-patroni-dev.
 # Same functional checks as prod, PLUS: bash IS present and the cluster-debugging
 # tools (psql, curl, jq) are available.
 set -eu

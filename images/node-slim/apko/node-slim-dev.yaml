@@ -1,4 +1,4 @@
-# Development variant of minimal-node-slim.
+# Development variant of containers-node-slim.
 # Same Node.js 26 runtime as prod, plus shell, npm/yarn/pnpm/corepack,
 # build toolchain (for node-gyp), git, and native-module deps.
 # Intended for CI build stages and in-pod debugging. NOT for production.
@@ -115,10 +115,10 @@ paths:
     recursive: true
 
 annotations:
-  org.opencontainers.image.title: "minimal-node-slim-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-node-slim: same Node.js runtime + shell + build toolchain + npm/yarn/pnpm. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/node-slim"
+  org.opencontainers.image.title: "containers-node-slim-dev"
+  org.opencontainers.image.description: "Dev variant of containers-node-slim: same Node.js runtime + shell + build toolchain + npm/yarn/pnpm. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/node-slim"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

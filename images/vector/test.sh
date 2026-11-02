@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-vector (prod).
+# Smoke test for containers-vector (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

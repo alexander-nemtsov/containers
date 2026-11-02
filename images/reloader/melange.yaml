@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-reloader
+# Melange build configuration for containers-reloader
 # Stakater Reloader configmap and secret reloader, from source.
 
 package:

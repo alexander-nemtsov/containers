@@ -1,4 +1,4 @@
-# Development variant of minimal-tailscale.
+# Development variant of containers-tailscale.
 
 contents:
   repositories:
@@ -55,10 +55,10 @@ paths:
     permissions: 0o700
 
 annotations:
-  org.opencontainers.image.title: "minimal-tailscale-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-tailscale: same binaries + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/tailscale"
+  org.opencontainers.image.title: "containers-tailscale-dev"
+  org.opencontainers.image.description: "Dev variant of containers-tailscale: same binaries + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/tailscale"
   org.opencontainers.image.licenses: "BSD-3-Clause"
 
   dev.minimal.variant: "dev"

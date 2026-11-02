@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-stern-dev.
+# Smoke test for containers-stern-dev.
 set -eu
 
 : "${IMAGE:?IMAGE env var required}"

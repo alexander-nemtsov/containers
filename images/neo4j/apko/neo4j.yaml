@@ -109,10 +109,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-neo4j"
+  org.opencontainers.image.title: "containers-neo4j"
   org.opencontainers.image.description: "Hardened Neo4j graph database built from source with CVE patches on every rebuild"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/neo4j"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/neo4j"
   org.opencontainers.image.licenses: "GPL-3.0-only"
 
 archs:

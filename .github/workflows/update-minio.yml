@@ -136,7 +136,7 @@ jobs:
 
           ## Image Tag
 
-          Once merged, this will publish: `ghcr.io/rtvkiz/minimal-minio:${{ steps.check.outputs.new_version }}-r0`
+          Once merged, this will publish: `ghcr.io/alexander-nemtsov/containers-minio:${{ steps.check.outputs.new_version }}-r0`
 
           ## Links
 

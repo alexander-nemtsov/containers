@@ -1,7 +1,7 @@
 {
-  "org": "rtvkiz",
+  "org": "alexander-nemtsov",
   "registry": "ghcr.io",
-  "prefix": "minimal-",
+  "prefix": "containers-",
   "categories": [
     "Languages & Runtimes",
     "Databases",

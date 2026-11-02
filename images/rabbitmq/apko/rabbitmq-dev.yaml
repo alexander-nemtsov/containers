@@ -1,4 +1,4 @@
-# Development variant of minimal-rabbitmq.
+# Development variant of containers-rabbitmq.
 # Same RabbitMQ 4 + Erlang 27 as prod, plus bash, apk-tools,
 # curl (for management plugin HTTP API), socat, jq.
 #
@@ -84,10 +84,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-rabbitmq-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-rabbitmq: same broker + shell + curl/socat/jq for HTTP API debugging. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rabbitmq"
+  org.opencontainers.image.title: "containers-rabbitmq-dev"
+  org.opencontainers.image.description: "Dev variant of containers-rabbitmq: same broker + shell + curl/socat/jq for HTTP API debugging. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/rabbitmq"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

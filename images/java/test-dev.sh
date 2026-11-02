@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-java-dev.
+# Smoke test for containers-java-dev.
 # Validates full JDK + shell + git on top of java prod (which ships JRE only).
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 

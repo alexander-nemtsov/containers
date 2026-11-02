@@ -1,4 +1,4 @@
-# Development variant of minimal-php.
+# Development variant of containers-php.
 # Same PHP 8.5 CLI as prod, plus shell, apk-tools, gcc toolchain (for
 # native extensions like grpc/redis), git.
 #
@@ -108,10 +108,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-php-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-php: same PHP CLI runtime + shell + build toolchain + git. composer NOT baked in v1. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/php"
+  org.opencontainers.image.title: "containers-php-dev"
+  org.opencontainers.image.description: "Dev variant of containers-php: same PHP CLI runtime + shell + build toolchain + git. composer NOT baked in v1. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/php"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

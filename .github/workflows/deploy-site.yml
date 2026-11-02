@@ -1,6 +1,6 @@
 name: Deploy catalog site
 
-# Builds and deploys the minimalcontainers.com catalog to GitHub Pages.
+# Builds and deploys the catalog.nexaflow.by catalog to GitHub Pages.
 #
 # Decoupled from the image build: this runs on its own and reuses the scan /
 # SBOM artifacts uploaded by the most recent successful "Build Hardened Images"

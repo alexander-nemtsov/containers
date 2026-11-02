@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-helm-dev.
+# Smoke test for containers-helm-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"
@@ -35,4 +35,4 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c "curl --version >/dev/null && j
 echo "Testing bind-tools (dig)..."
 docker run --rm --entrypoint /bin/sh "$IMAGE" -c "dig -v" 2>&1 | grep -qE "^DiG"
 
-echo "All minimal-helm-dev smoke tests passed"
+echo "All containers-helm-dev smoke tests passed"

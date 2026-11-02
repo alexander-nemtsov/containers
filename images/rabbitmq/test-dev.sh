@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-rabbitmq-dev.
+# Smoke test for containers-rabbitmq-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

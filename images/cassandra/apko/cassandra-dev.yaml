@@ -1,4 +1,4 @@
-# Development variant of minimal-cassandra.
+# Development variant of containers-cassandra.
 # Same Cassandra 5.0 + custom jlink JRE as prod, plus bash, apk-tools,
 # curl/socat/jq for debugging. nodetool ships in the cassandra package.
 #
@@ -99,10 +99,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-cassandra-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-cassandra: same Cassandra + JRE + shell + curl/socat/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/cassandra"
+  org.opencontainers.image.title: "containers-cassandra-dev"
+  org.opencontainers.image.description: "Dev variant of containers-cassandra: same Cassandra + JRE + shell + curl/socat/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/cassandra"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

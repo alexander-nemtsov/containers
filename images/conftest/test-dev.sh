@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-conftest-dev.
+# Smoke test for containers-conftest-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

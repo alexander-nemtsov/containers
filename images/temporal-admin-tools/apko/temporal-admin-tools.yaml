@@ -1,4 +1,4 @@
-# minimal-temporal-admin-tools — built from source via melange
+# containers-temporal-admin-tools — built from source via melange
 # Temporal admin, schema and CLI tooling, built from source with SLSA provenance.
 #
 # Runtime shape mirrors the published temporalio/Chainguard images so this is a
@@ -48,10 +48,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-temporal-admin-tools"
+  org.opencontainers.image.title: "containers-temporal-admin-tools"
   org.opencontainers.image.description: "Temporal admin, schema and CLI tooling, built from source with SLSA provenance."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/temporal-admin-tools"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/temporal-admin-tools"
   org.opencontainers.image.licenses: "MIT"
 
 archs:

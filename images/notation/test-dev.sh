@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-notation-dev.
+# Smoke test for containers-notation-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

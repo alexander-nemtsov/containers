@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-helmfile-dev.
+# Smoke test for containers-helmfile-dev.
 set -eu
 
 : "${IMAGE:?IMAGE env var required}"

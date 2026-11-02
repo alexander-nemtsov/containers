@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-skopeo-dev.
+# Smoke test for containers-skopeo-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

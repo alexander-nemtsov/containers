@@ -42,10 +42,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-jaeger"
+  org.opencontainers.image.title: "containers-jaeger"
   org.opencontainers.image.description: "Hardened Jaeger distributed tracing backend built from source via melange"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/jaeger"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/jaeger"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

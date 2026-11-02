@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kube-state-metrics-dev.
+# Smoke test for containers-kube-state-metrics-dev.
 # Same functional checks as prod, PLUS: a shell IS present and the HTTP/TLS
 # debugging tools are available.
 set -eu

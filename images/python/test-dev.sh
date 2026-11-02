@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-python-dev.
+# Smoke test for containers-python-dev.
 # Validates the dev variant has shell + toolchain + pip/uv while
 # preserving prod runtime parity (same entrypoint, same Python).
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI

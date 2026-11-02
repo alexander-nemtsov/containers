@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-keepalived (prod).
+# Smoke test for containers-keepalived (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

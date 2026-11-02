@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-temporal-server
+# Melange build configuration for containers-temporal-server
 # Temporal workflow engine server built from source
 
 package:

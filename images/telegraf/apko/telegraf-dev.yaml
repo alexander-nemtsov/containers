@@ -1,4 +1,4 @@
-# Development variant of minimal-telegraf.
+# Development variant of containers-telegraf.
 # Same source-built telegraf + ca-certs, plus shell + curl/openssl/dig
 # + jq for HTTP API debugging.
 
@@ -66,10 +66,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-telegraf-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-telegraf: same telegraf + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/telegraf"
+  org.opencontainers.image.title: "containers-telegraf-dev"
+  org.opencontainers.image.description: "Dev variant of containers-telegraf: same telegraf + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/telegraf"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

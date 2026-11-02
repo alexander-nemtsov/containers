@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-go-dev.
+# Smoke test for containers-go-dev.
 # Validates shell + openssh + auth stack on top of go prod (which already
 # ships the toolchain). Most prod assertions are covered by go/test.sh.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI

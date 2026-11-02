@@ -1,4 +1,4 @@
-# Development variant of minimal-zookeeper.
+# Development variant of containers-zookeeper.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -57,10 +57,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-zookeeper-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-zookeeper: same server + shell + curl/openssl/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/zookeeper"
+  org.opencontainers.image.title: "containers-zookeeper-dev"
+  org.opencontainers.image.description: "Dev variant of containers-zookeeper: same server + shell + curl/openssl/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/zookeeper"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

@@ -187,7 +187,7 @@ pipeline:
       GO_VERSION=$(go version | awk '{print $3}')
       BUILDINFO=zotregistry.dev/zot/v2/pkg/api/config
       # "minimal" build (no extra build tags): fewer deps, fewer CVEs, matches
-      # this project's minimal-footprint goal. Excludes search/scrub/sync/UI
+      # this project's containers-footprint goal. Excludes search/scrub/sync/UI
       # extensions that pull in extra transitive dependencies.
       GOTOOLCHAIN=local CGO_ENABLED=0 go build \
         -trimpath \

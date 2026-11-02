@@ -84,10 +84,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-wordpress-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-wordpress with a shell, PHP CLI, and network debugging tools"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/wordpress"
+  org.opencontainers.image.title: "containers-wordpress-dev"
+  org.opencontainers.image.description: "Dev variant of containers-wordpress with a shell, PHP CLI, and network debugging tools"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/wordpress"
   org.opencontainers.image.licenses: "GPL-2.0-or-later"
   dev.minimal.variant: "dev"
 

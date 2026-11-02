@@ -11,10 +11,10 @@ const featured = featuredNames
   .filter((i): i is NonNullable<typeof i> => Boolean(i));
 
 const verifyCmd = `# Pull — public, no login, no Docker Hub pull limits
-docker pull ghcr.io/rtvkiz/minimal-python:latest
+docker pull ghcr.io/alexander-nemtsov/containers-python:latest
 
 # Verify build provenance (SLSA v1.0, Build L2)
-gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz`;
+gh attestation verify oci://ghcr.io/alexander-nemtsov/containers-python:latest --owner alexander-nemtsov`;
 
 // Real questions people type before adopting a hardened base image. The answers
 // live in the page body (not only in schema) because that is the text an answer
@@ -53,16 +53,16 @@ const schema = [
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Minimal Containers',
-    url: 'https://minimalcontainers.com',
-    logo: 'https://minimalcontainers.com/icon.svg',
+    url: 'https://catalog.nexaflow.by',
+    logo: 'https://catalog.nexaflow.by/icon.svg',
     description: `Free, hardened, MIT-licensed container images — ${stats.images} of them, rebuilt daily.`,
-    sameAs: ['https://github.com/rtvkiz/minimal'],
+    sameAs: ['https://github.com/alexander-nemtsov/containers'],
   },
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Minimal Containers',
-    url: 'https://minimalcontainers.com',
+    url: 'https://catalog.nexaflow.by',
   },
   {
     '@context': 'https://schema.org',

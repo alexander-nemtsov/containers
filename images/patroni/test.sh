@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-patroni (prod).
+# Smoke test for containers-patroni (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

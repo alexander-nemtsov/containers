@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kaniko (prod).
+# Smoke test for containers-kaniko (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
@@ -21,7 +21,7 @@ docker run --rm -v "$work:/workspace" "$IMAGE" \
   --dockerfile /workspace/Dockerfile \
   --no-push --force \
   --tar-path /workspace/out.tar \
-  --destination minimal-kaniko-selftest:latest >/dev/null 2>&1 || {
+  --destination containers-kaniko-selftest:latest >/dev/null 2>&1 || {
     echo "FAIL: kaniko build errored"; exit 1; }
 [ -s "$work/out.tar" ] \
   && echo "kaniko built an image tarball offline ($(stat -c%s "$work/out.tar") bytes)" \

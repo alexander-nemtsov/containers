@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-argo-cd-repo-server (prod).
+# Smoke test for containers-argo-cd-repo-server (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

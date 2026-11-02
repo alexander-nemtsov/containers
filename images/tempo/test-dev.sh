@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-tempo-dev.
+# Smoke test for containers-tempo-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

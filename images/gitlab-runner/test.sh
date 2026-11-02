@@ -36,7 +36,7 @@ concurrent = 4
 check_interval = 3
 
 [[runners]]
-  name = "minimal-smoke-test"
+  name = "containers-smoke-test"
   url = "https://gitlab.example.com/"
   token = "not-a-real-token"
   executor = "docker"
@@ -51,7 +51,7 @@ out=$(docker run --rm -v "$work:/cfg" --entrypoint /usr/bin/gitlab-runner "$IMAG
 # `Executor<ESC>[0;m=docker` — a naive grep for 'Executor=docker' fails against
 # a perfectly good image. Strip the escapes before matching.
 clean=$(printf '%s' "$out" | sed 's/\x1b\[[0-9;]*m//g')
-echo "$clean" | grep -q 'minimal-smoke-test' \
+echo "$clean" | grep -q 'containers-smoke-test' \
   || { echo "FAIL: runner did not list the configured runner: $out"; exit 1; }
 echo "$clean" | grep -q 'Executor=docker' \
   || { echo "FAIL: executor not parsed from config: $out"; exit 1; }

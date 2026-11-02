@@ -1,6 +1,6 @@
-# Development variant of minimal-helm.
+# Development variant of containers-helm.
 # Same helm binary, plus shell + curl + git + jq for chart-pipeline debugging.
-# Not intended for production CI use — prefer minimal-helm for that.
+# Not intended for production CI use — prefer containers-helm for that.
 
 contents:
   repositories:
@@ -54,10 +54,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-helm-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-helm: same helm CLI + shell + curl/git/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/helm"
+  org.opencontainers.image.title: "containers-helm-dev"
+  org.opencontainers.image.description: "Dev variant of containers-helm: same helm CLI + shell + curl/git/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/helm"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

@@ -75,10 +75,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-meilisearch-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-meilisearch with a shell, package manager, and network debugging tools"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/meilisearch"
+  org.opencontainers.image.title: "containers-meilisearch-dev"
+  org.opencontainers.image.description: "Dev variant of containers-meilisearch with a shell, package manager, and network debugging tools"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/meilisearch"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

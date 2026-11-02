@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-pgbouncer-dev.
+# Smoke test for containers-pgbouncer-dev.
 # Same functional checks as prod, PLUS: a shell IS present, and the debugging
 # tools (psql for the admin console) are available.
 set -eu

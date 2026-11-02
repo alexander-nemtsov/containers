@@ -1,4 +1,4 @@
-# Development variant of minimal-postgres-exporter.
+# Development variant of containers-postgres-exporter.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -50,10 +50,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-postgres-exporter-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-postgres-exporter: same binary plus shell, curl, openssl, dig and jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/postgres-exporter"
+  org.opencontainers.image.title: "containers-postgres-exporter-dev"
+  org.opencontainers.image.description: "Dev variant of containers-postgres-exporter: same binary plus shell, curl, openssl, dig and jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/postgres-exporter"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

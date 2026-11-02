@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-argo-cd-dev.
+# Smoke test for containers-argo-cd-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

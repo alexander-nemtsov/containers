@@ -1,4 +1,4 @@
-# Development variant of minimal-mosquitto.
+# Development variant of containers-mosquitto.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -50,10 +50,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-mosquitto-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-mosquitto: same MQTT broker + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/mosquitto"
+  org.opencontainers.image.title: "containers-mosquitto-dev"
+  org.opencontainers.image.description: "Dev variant of containers-mosquitto: same MQTT broker + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/mosquitto"
   org.opencontainers.image.licenses: "EPL-2.0"
   dev.minimal.variant: "dev"
 

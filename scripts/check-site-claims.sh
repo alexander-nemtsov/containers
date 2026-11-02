@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Verify the factual claims on minimalcontainers.com against this repo and,
+# Verify the factual claims on catalog.nexaflow.by against this repo and,
 # optionally, against the outside world.
 #
 # WHY THIS EXISTS. Site claims drift silently and in both directions. Commit

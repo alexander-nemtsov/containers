@@ -1,6 +1,6 @@
-# minimalcontainers.com
+# catalog.nexaflow.by
 # Everything here is public documentation for a public image catalogue.
 User-agent: *
 Allow: /
 
-Sitemap: https://minimalcontainers.com/sitemap-index.xml
+Sitemap: https://catalog.nexaflow.by/sitemap-index.xml

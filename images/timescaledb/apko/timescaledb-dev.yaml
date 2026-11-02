@@ -1,4 +1,4 @@
-# Development variant of minimal-timescaledb.
+# Development variant of containers-timescaledb.
 # Same PostgreSQL 18 + timescaledb extension as prod, plus shell, apk-tools,
 # gosu, curl, socat, jq. Mirrors postgres-slim-dev's delta.
 
@@ -104,10 +104,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-timescaledb-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-timescaledb: same PostgreSQL + extension + shell + psql/curl/socat/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/timescaledb"
+  org.opencontainers.image.title: "containers-timescaledb-dev"
+  org.opencontainers.image.description: "Dev variant of containers-timescaledb: same PostgreSQL + extension + shell + psql/curl/socat/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/timescaledb"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

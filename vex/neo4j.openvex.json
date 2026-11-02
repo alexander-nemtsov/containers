@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/rtvkiz/minimal/vex/neo4j",
-  "author": "rtvkiz",
+  "@id": "https://github.com/alexander-nemtsov/containers/vex/neo4j",
+  "author": "alexander-nemtsov",
   "timestamp": "2026-09-24T00:00:00Z",
   "version": 1,
   "tooling": "tools/vex/validate.sh",

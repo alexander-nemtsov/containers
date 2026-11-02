@@ -34,8 +34,8 @@ const REPORTS_DIR = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : 
 const OUT_FILE = join(SITE_DIR, 'src', 'data', 'images.json');
 
 const REGISTRY = 'ghcr.io';
-const ORG = 'rtvkiz';
-const PREFIX = 'minimal-';
+const ORG = 'alexander-nemtsov';
+const PREFIX = 'containers-';
 const GH_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const SKIP_TAGS = process.env.SKIP_TAGS === '1' || process.env.SKIP_TAGS === 'true';
 const FETCH_TIMEOUT_MS = 8000;
@@ -332,7 +332,7 @@ async function buildImage(entry) {
     name,
     // Page identity, separate from registry identity.
     //
-    // `name` is a contract: it builds the pull ref (minimal-redis-slim) that
+    // `name` is a contract: it builds the pull ref (containers-redis-slim) that
     // users have already written into Dockerfiles, so it cannot move. But three
     // images carry a "-slim" suffix that nobody searches for, and those three
     // (redis, postgres, node) are among the most-pulled images in existence.

@@ -66,10 +66,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-airflow-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-airflow with a shell, package manager, and network debugging tools"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/airflow"
+  org.opencontainers.image.title: "containers-airflow-dev"
+  org.opencontainers.image.description: "Dev variant of containers-airflow with a shell, package manager, and network debugging tools"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/airflow"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

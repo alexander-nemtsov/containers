@@ -75,7 +75,7 @@ for i in $(seq 0 $((image_count - 1))); do
   # escaped as <<PKG_VERSION>> in the registry. This survives toJson + bash.
   src_root="${src_root_raw//<<PKG_VERSION>>/\${\{package.version\}\}}"
 
-  full_image="${registry}/${owner}/minimal-${image}:latest"
+  full_image="${registry}/${owner}/containers-${image}:latest"
   melange="images/${image}/melange.yaml"
 
   echo "=== Scanning $image ==="

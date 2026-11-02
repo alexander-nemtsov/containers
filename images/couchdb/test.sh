@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-couchdb (prod).
+# Smoke test for containers-couchdb (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

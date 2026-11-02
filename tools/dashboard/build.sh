@@ -475,7 +475,7 @@ for f in "$REPORTS_DIR"/grype-*.json; do
 <p class="back"><a href="index.html">← All images</a></p>
 <h1>${NAME}</h1>
 <p class="subtitle">${T} open finding$([ "$T" -eq 1 ] || echo s) · ${FIXABLE} with upstream fix available${EFFECTIVE_LINE}</p>
-<p class="meta">Image: <code>ghcr.io/rtvkiz/minimal-${NAME}:latest</code> &nbsp;·&nbsp; Size: ${SIZE_DISPLAY} &nbsp;·&nbsp; Last rebuilt: ${AGE_DISPLAY} ago &nbsp;·&nbsp; Updated: ${BUILD_DATE}</p>
+<p class="meta">Image: <code>ghcr.io/alexander-nemtsov/containers-${NAME}:latest</code> &nbsp;·&nbsp; Size: ${SIZE_DISPLAY} &nbsp;·&nbsp; Last rebuilt: ${AGE_DISPLAY} ago &nbsp;·&nbsp; Updated: ${BUILD_DATE}</p>
 ${DIGEST_LINE}
 ${VEX_BLOCK}
 <table>

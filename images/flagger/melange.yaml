@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-flagger
+# Melange build configuration for containers-flagger
 # Flagger progressive delivery operator built from source.
 
 package:

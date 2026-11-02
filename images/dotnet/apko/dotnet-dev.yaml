@@ -1,4 +1,4 @@
-# Development variant of minimal-dotnet.
+# Development variant of containers-dotnet.
 #
 # Prod ships dotnet-10-runtime (just the runtime). Dev ships dotnet-10
 # (full SDK with dotnet build, dotnet publish, dotnet test, etc.) plus
@@ -104,10 +104,10 @@ paths:
     recursive: true
 
 annotations:
-  org.opencontainers.image.title: "minimal-dotnet-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-dotnet: full .NET 10 SDK + shell + git + full ICU + tzdata. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/dotnet"
+  org.opencontainers.image.title: "containers-dotnet-dev"
+  org.opencontainers.image.description: "Dev variant of containers-dotnet: full .NET 10 SDK + shell + git + full ICU + tzdata. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/dotnet"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

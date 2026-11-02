@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-neo4j-dev.
+# Smoke test for containers-neo4j-dev.
 # Same functional checks as prod, PLUS: apk-tools/curl/jq are available.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
@@ -9,7 +9,7 @@ ver=$(docker run --rm --entrypoint /usr/bin/neo4j "$IMAGE" version 2>&1)
 echo "$ver" | grep -qE 'neo4j [0-9]+\.[0-9]+\.[0-9]+' \
   || { echo "FAIL: could not read neo4j version: $ver"; exit 1; }
 
-vol="minimal-neo4j-dev-test-$$"
+vol="containers-neo4j-dev-test-$$"
 docker volume create "$vol" >/dev/null
 trap 'docker volume rm -f "$vol" >/dev/null 2>&1 || true' EXIT
 
@@ -19,7 +19,7 @@ docker run --rm -u root -v "$vol:/usr/share/neo4j/data" \
 echo "Setting the initial password (offline)..."
 docker run --rm -v "$vol:/usr/share/neo4j/data" \
   --entrypoint /usr/bin/neo4j-admin "$IMAGE" \
-  dbms set-initial-password minimal-test-password 2>&1 || true
+  dbms set-initial-password containers-test-password 2>&1 || true
 
 echo "Starting neo4j and waiting for the HTTP endpoint..."
 cid=$(docker run -d -p 17475:7474 -p 17688:7687 \

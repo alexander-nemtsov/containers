@@ -1,4 +1,4 @@
-# Development variant of minimal-ruby.
+# Development variant of containers-ruby.
 # Same Ruby 4.0.x runtime as the prod image, plus a shell, package manager,
 # build toolchain, and common native-gem dependencies. Intended for CI build
 # stages and in-pod debugging. NOT intended for production deployment.
@@ -125,10 +125,10 @@ paths:
     recursive: true
 
 annotations:
-  org.opencontainers.image.title: "minimal-ruby-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-ruby: same Ruby runtime + shell + build toolchain. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/ruby"
+  org.opencontainers.image.title: "containers-ruby-dev"
+  org.opencontainers.image.description: "Dev variant of containers-ruby: same Ruby runtime + shell + build toolchain. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/ruby"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

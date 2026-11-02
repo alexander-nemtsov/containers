@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-trufflehog-dev.
+# Smoke test for containers-trufflehog-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-vector-dev.
+# Smoke test for containers-vector-dev.
 # Same functional checks as prod, PLUS: a shell IS present and the sink-debugging
 # tools (curl/jq/dig) are available.
 set -eu

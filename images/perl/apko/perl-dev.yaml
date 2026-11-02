@@ -1,4 +1,4 @@
-# Development variant of minimal-perl.
+# Development variant of containers-perl.
 # Same Perl from prod, plus a shell, the C toolchain needed to build XS
 # modules, and cpanminus for installing from CPAN.
 #
@@ -88,10 +88,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-perl-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-perl: same Perl + shell, C toolchain and cpanminus. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/perl"
+  org.opencontainers.image.title: "containers-perl-dev"
+  org.opencontainers.image.description: "Dev variant of containers-perl: same Perl + shell, C toolchain and cpanminus. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/perl"
   org.opencontainers.image.licenses: "Artistic-1.0-Perl OR GPL-1.0-or-later"
   dev.minimal.variant: "dev"
 

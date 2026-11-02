@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-redis-slim-dev.
+# Smoke test for containers-redis-slim-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

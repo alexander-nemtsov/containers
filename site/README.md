@@ -1,11 +1,11 @@
-# minimalcontainers.com — catalog site
+# catalog.nexaflow.by — catalog site
 
 The public image catalog for the `minimal` project, built with [Astro](https://astro.build)
-and deployed to GitHub Pages on the custom domain **minimalcontainers.com**.
+and deployed to GitHub Pages on the custom domain **catalog.nexaflow.by**.
 
 It is built and deployed by `.github/workflows/deploy-site.yml`, which reuses the scan and
 SBOM artifacts produced by the image build (`build.yml`) — so it stays in sync with what's
-published to `ghcr.io/rtvkiz/minimal-*`, while deploying independently of the daily build.
+published to `ghcr.io/alexander-nemtsov/containers-*`, while deploying independently of the daily build.
 
 **Deploy is decoupled from the image build.** `deploy-site.yml` triggers on:
 - `workflow_run` — after each build completes, to redeploy with fresh scan data;
@@ -66,9 +66,9 @@ The `validate-catalog` CI job fails if `catalog.json` and the build matrix ever 
 
 The site deploys automatically from CI. To point the domain at it:
 
-1. **Repo → Settings → Pages → Custom domain** → `minimalcontainers.com`, then enable
+1. **Repo → Settings → Pages → Custom domain** → `catalog.nexaflow.by`, then enable
    **Enforce HTTPS** once DNS resolves. (`public/CNAME` is already committed.)
-2. In **GoDaddy DNS** for `minimalcontainers.com`:
+2. In **GoDaddy DNS** for `catalog.nexaflow.by`:
 
    | Type  | Name | Value |
    |-------|------|-------|
@@ -76,9 +76,9 @@ The site deploys automatically from CI. To point the domain at it:
    | A     | @    | `185.199.109.153` |
    | A     | @    | `185.199.110.153` |
    | A     | @    | `185.199.111.153` |
-   | CNAME | www  | `rtvkiz.github.io` |
+   | CNAME | www  | `alexander-nemtsov.github.io` |
 
    (Optional IPv6: AAAA `@` → `2606:50c0:8000::153`, `…8001::153`, `…8002::153`, `…8003::153`.)
 
-GitHub auto-provisions the TLS certificate. Once live, `https://rtvkiz.github.io/minimal/`
+GitHub auto-provisions the TLS certificate. Once live, `https://alexander-nemtsov.github.io/minimal/`
 redirects to the custom domain.

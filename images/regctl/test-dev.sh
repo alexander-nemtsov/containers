@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-regctl-dev.
+# Smoke test for containers-regctl-dev.
 set -eu
 
 : "${IMAGE:?IMAGE env var required}"

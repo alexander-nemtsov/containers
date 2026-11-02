@@ -1,4 +1,4 @@
-# Development variant of minimal-keepalived.
+# Development variant of containers-keepalived.
 # Same keepalived from prod, plus a shell and network troubleshooting tools
 # (ip, ping) for working out why a VIP is not being claimed.
 #
@@ -88,10 +88,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-keepalived-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-keepalived: same keepalived + shell and ip/ping. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/keepalived"
+  org.opencontainers.image.title: "containers-keepalived-dev"
+  org.opencontainers.image.description: "Dev variant of containers-keepalived: same keepalived + shell and ip/ping. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/keepalived"
   org.opencontainers.image.licenses: "GPL-2.0-or-later"
   dev.minimal.variant: "dev"
 

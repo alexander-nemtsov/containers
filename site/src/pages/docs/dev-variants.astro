@@ -17,18 +17,18 @@ const total = images.length;
 
       <h2 class="section-title" style="margin-top:44px">Multi-stage build</h2>
       <p class="small muted">Build with the toolchain, ship without it.</p>
-      <CopyButton code={`FROM ghcr.io/rtvkiz/minimal-ruby:latest-dev AS build
+      <CopyButton code={`FROM ghcr.io/alexander-nemtsov/containers-ruby:latest-dev AS build
 WORKDIR /work
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-FROM ghcr.io/rtvkiz/minimal-ruby:latest
+FROM ghcr.io/alexander-nemtsov/containers-ruby:latest
 COPY --from=build /work /work`} />
 
       <h2 class="section-title" style="margin-top:44px">Interactive shell</h2>
       <p class="small muted">Dev images retain the production entrypoint. Override it to get a shell.</p>
       <CopyButton code={`docker run -it --entrypoint /bin/sh \\
-  ghcr.io/rtvkiz/minimal-caddy:latest-dev`} />
+  ghcr.io/alexander-nemtsov/containers-caddy:latest-dev`} />
 
       <h2 class="section-title" style="margin-top:44px">Same pipeline, different scope</h2>
       <p>
@@ -39,7 +39,7 @@ COPY --from=build /work /work`} />
       </p>
       <p class="small muted">
         Composition rules are documented in
-        <a href="https://github.com/rtvkiz/minimal/blob/main/docs/dev-variants/CONVENTIONS.md" rel="noopener">docs/dev-variants/CONVENTIONS.md</a>.
+        <a href="https://github.com/alexander-nemtsov/containers/blob/main/docs/dev-variants/CONVENTIONS.md" rel="noopener">docs/dev-variants/CONVENTIONS.md</a>.
       </p>
     </div>
   </section>

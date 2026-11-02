@@ -16,7 +16,7 @@ const schema = [{
   itemListElement: map.pairs.map((p, i) => ({
     '@type': 'ListItem',
     position: i + 1,
-    name: `${p.bitnami} → minimal-${p.minimal}`,
+    name: `${p.bitnami} → containers-${p.minimal}`,
     url: new URL(imageHref(p.minimal), Astro.site).href,
   })),
 }];
@@ -52,7 +52,7 @@ const schema = [{
             {map.pairs.map((p) => (
               <tr>
                 <td class="kv-mono">bitnami/{p.bitnami}</td>
-                <td><a href={imageHref(p.minimal)}>minimal-{p.minimal}</a></td>
+                <td><a href={imageHref(p.minimal)}>containers-{p.minimal}</a></td>
                 <td style="text-align:right" class="kv-mono">{p.pulls ? p.pulls.toLocaleString('en-GB') : '—'}</td>
               </tr>
             ))}
@@ -122,8 +122,8 @@ const schema = [{
       </p>
 
       <h2 class="section-title" style="margin-top:44px">Try one</h2>
-      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-postgres-slim:latest
-grype ghcr.io/rtvkiz/minimal-postgres-slim:latest`} />
+      <CopyButton code={`docker pull ghcr.io/alexander-nemtsov/containers-postgres-slim:latest
+grype ghcr.io/alexander-nemtsov/containers-postgres-slim:latest`} />
       <p style="margin-top:20px">
         The general migration steps — tags, verification, rollout order — are in
         <a href="/blog/migrating-from-minimus-to-minimal/">the migration guide</a>, and apply

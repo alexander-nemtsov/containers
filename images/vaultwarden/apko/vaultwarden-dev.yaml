@@ -1,4 +1,4 @@
-# Development variant of minimal-vaultwarden.
+# Development variant of containers-vaultwarden.
 # Same vaultwarden binary and web vault (source-built via melange) as prod,
 # plus a shell and HTTP/TLS debugging tools for poking at the Rocket API.
 
@@ -62,10 +62,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-vaultwarden-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-vaultwarden: same server + shell and debug tools. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vaultwarden"
+  org.opencontainers.image.title: "containers-vaultwarden-dev"
+  org.opencontainers.image.description: "Dev variant of containers-vaultwarden: same server + shell and debug tools. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/vaultwarden"
   org.opencontainers.image.licenses: "AGPL-3.0-only AND GPL-3.0-only"
 
 archs:

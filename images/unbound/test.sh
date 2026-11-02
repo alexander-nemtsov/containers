@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-unbound (prod).
+# Smoke test for containers-unbound (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

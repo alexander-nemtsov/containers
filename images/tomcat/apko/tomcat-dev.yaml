@@ -59,10 +59,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-tomcat-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-tomcat: same server + shell + curl/openssl/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/tomcat"
+  org.opencontainers.image.title: "containers-tomcat-dev"
+  org.opencontainers.image.description: "Dev variant of containers-tomcat: same server + shell + curl/openssl/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/tomcat"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

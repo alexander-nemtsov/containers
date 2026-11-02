@@ -14,7 +14,7 @@ command -v jq >/dev/null 2>&1 || { echo "jq is required" >&2; exit 2; }
 if command -v yq >/dev/null 2>&1; then
   yq_bin="yq"
 else
-  cache="${XDG_CACHE_HOME:-$HOME/.cache}/minimal-workflow-lint"
+  cache="${XDG_CACHE_HOME:-$HOME/.cache}/containers-workflow-lint"
   mkdir -p "$cache"
   yq_bin="$cache/yq"
   if [ ! -x "$yq_bin" ]; then

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-perl (prod).
+# Smoke test for containers-perl (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
@@ -28,7 +28,7 @@ echo "Testing a real round-trip: JSON encode/decode + SHA + gzip (offline)..."
 out=$(docker run --rm "$IMAGE" -e '
   use strict; use warnings;
   use JSON::PP; use Digest::SHA qw(sha256_hex); use Compress::Zlib;
-  my $data = { image => "minimal-perl", n => 42, list => [1,2,3] };
+  my $data = { image => "containers-perl", n => 42, list => [1,2,3] };
   my $json = JSON::PP->new->canonical->encode($data);
   my $back = JSON::PP->new->decode($json);
   die "json round-trip failed" unless $back->{n} == 42 && $back->{list}[2] == 3;

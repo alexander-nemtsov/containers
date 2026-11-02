@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-temporal-ui-server
+# Melange build configuration for containers-temporal-ui-server
 # Temporal Web UI server built from source
 
 package:

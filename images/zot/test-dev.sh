@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-zot-dev.
+# Smoke test for containers-zot-dev.
 # Same functional checks as prod, PLUS: a shell IS present, and the registry
 # debugging tools (curl/jq) are available.
 set -eu

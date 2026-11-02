@@ -41,7 +41,7 @@ for _ in $(seq 1 30); do
 done
 [ -n "$ok" ] || { echo "FAIL: nsqd did not answer /ping"; docker logs "$CID" 2>&1 | tail -30; exit 1; }
 
-curl -fsS --max-time 5 -d 'minimal-smoke-test' \
+curl -fsS --max-time 5 -d 'containers-smoke-test' \
   'http://127.0.0.1:14151/pub?topic=smoke' >/dev/null \
   || { echo "FAIL: publish rejected"; docker logs "$CID" 2>&1 | tail -20; exit 1; }
 

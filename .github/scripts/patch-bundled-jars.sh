@@ -117,7 +117,7 @@ for i in $(seq 0 $((image_count - 1))); do
   strategy=$(jq -r '.strategy' <<<"$img_json")
   splice_before=$(jq -r '.["splice-before"]' <<<"$img_json")
   melange="images/${image}/melange.yaml"
-  full_image="${registry}/${owner}/minimal-${image}:latest"
+  full_image="${registry}/${owner}/containers-${image}:latest"
 
   echo "=== Scanning $image (bundled jars) ==="
   [ -f "$melange" ] || { echo "  WARN: $melange not found"; continue; }

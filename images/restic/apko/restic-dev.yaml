@@ -1,4 +1,4 @@
-# Development variant of minimal-restic.
+# Development variant of containers-restic.
 
 contents:
   repositories:
@@ -50,10 +50,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-restic-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-restic: same restic + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/restic"
+  org.opencontainers.image.title: "containers-restic-dev"
+  org.opencontainers.image.description: "Dev variant of containers-restic: same restic + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/restic"
   org.opencontainers.image.licenses: "BSD-2-Clause"
 
   dev.minimal.variant: "dev"

@@ -1,4 +1,4 @@
-# Development variant of minimal-cosign.
+# Development variant of containers-cosign.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -52,10 +52,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-cosign-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-cosign: same cosign + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/cosign"
+  org.opencontainers.image.title: "containers-cosign-dev"
+  org.opencontainers.image.description: "Dev variant of containers-cosign: same cosign + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/cosign"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

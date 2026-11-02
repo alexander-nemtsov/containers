@@ -1,4 +1,4 @@
-# Development variant of minimal-kvrocks.
+# Development variant of containers-kvrocks.
 # Same kvrocks binary (built from source via melange) as prod, plus
 # bash, apk-tools, valkey (for valkey-cli, RESP-compatible), curl/socat/jq for debugging.
 
@@ -78,10 +78,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-kvrocks-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-kvrocks: same kvrocks binary + shell + valkey-cli + curl/socat/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kvrocks"
+  org.opencontainers.image.title: "containers-kvrocks-dev"
+  org.opencontainers.image.description: "Dev variant of containers-kvrocks: same kvrocks binary + shell + valkey-cli + curl/socat/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kvrocks"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

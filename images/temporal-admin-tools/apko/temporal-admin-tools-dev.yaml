@@ -1,5 +1,5 @@
-# Development variant of minimal-temporal-admin-tools
-# Dev variant of minimal-temporal-admin-tools: same binaries plus shell, curl, openssl, dig and jq. Not for production.
+# Development variant of containers-temporal-admin-tools
+# Dev variant of containers-temporal-admin-tools: same binaries plus shell, curl, openssl, dig and jq. Not for production.
 #
 # Runtime shape mirrors the published temporalio/Chainguard images so this is a
 # drop-in replacement: uid 1000, TEMPORAL_HOME=/etc/temporal, work-dir
@@ -57,10 +57,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-temporal-admin-tools-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-temporal-admin-tools: same binaries plus shell, curl, openssl, dig and jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/temporal-admin-tools"
+  org.opencontainers.image.title: "containers-temporal-admin-tools-dev"
+  org.opencontainers.image.description: "Dev variant of containers-temporal-admin-tools: same binaries plus shell, curl, openssl, dig and jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/temporal-admin-tools"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

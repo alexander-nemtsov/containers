@@ -1,4 +1,4 @@
-# Development variant of minimal-mailpit.
+# Development variant of containers-mailpit.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -52,10 +52,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-mailpit-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-mailpit: same SMTP/email tester + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/mailpit"
+  org.opencontainers.image.title: "containers-mailpit-dev"
+  org.opencontainers.image.description: "Dev variant of containers-mailpit: same SMTP/email tester + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/mailpit"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

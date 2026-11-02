@@ -43,10 +43,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-openbao"
+  org.opencontainers.image.title: "containers-openbao"
   org.opencontainers.image.description: "Hardened OpenBao secret management server (Vault fork, MPL 2.0)"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/openbao"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/openbao"
   org.opencontainers.image.licenses: "MPL-2.0"
 
 archs:

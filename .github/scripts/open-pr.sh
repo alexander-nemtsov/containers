@@ -19,7 +19,7 @@ files=$(jq -r '.files[] | if type == "string" then . else .path end' <<<"$row" |
 releases=$(j '.links.releases // empty')
 notes_tmpl=$(j '.links.notes // empty')
 notes_url="${notes_tmpl//\{version\}/$new}"
-image_name="minimal-$name"
+image_name="containers-$name"
 # Image-name overrides (e.g. distribution → registry, redis → redis-slim).
 # NB: hyphenated keys MUST be bracket-quoted in jq — `.image-name` is
 # parsed as subtraction (`.image - name`) and fails to compile.
@@ -45,7 +45,7 @@ Updates ${name} from \`${current}\` to \`${new}\`.
 
 ## Image Tag
 
-Once merged, this will publish: \`ghcr.io/rtvkiz/${image_name}:${new}-r0\`
+Once merged, this will publish: \`ghcr.io/alexander-nemtsov/${image_name}:${new}-r0\`
 
 ## Links
 ${releases:+- [Releases](${releases})}
@@ -53,7 +53,7 @@ ${notes_url:+- [Release notes for ${new}](${notes_url})}
 
 ---
 
-This PR was automatically created by the [update-versions](${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-rtvkiz/minimal}/actions/workflows/update-versions.yml) workflow.
+This PR was automatically created by the [update-versions](${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-alexander-nemtsov/containers}/actions/workflows/update-versions.yml) workflow.
 EOF
 )
 

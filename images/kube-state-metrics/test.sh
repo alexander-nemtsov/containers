@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kube-state-metrics (prod).
+# Smoke test for containers-kube-state-metrics (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

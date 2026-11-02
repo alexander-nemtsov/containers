@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-dnsmasq (prod).
+# Smoke test for containers-dnsmasq (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-redis-exporter-dev.
+# Smoke test for containers-redis-exporter-dev.
 # Same functional checks as prod, PLUS: a shell IS present and the Redis /
 # HTTP debugging tools are available.
 set -eu

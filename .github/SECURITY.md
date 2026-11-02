@@ -6,13 +6,13 @@ Only the latest version of each image is supported with security updates. Images
 
 | Image | Supported |
 |-------|-----------|
-| Latest tags (`ghcr.io/rtvkiz/minimal-*:latest`) | ✅ |
+| Latest tags (`ghcr.io/alexander-nemtsov/containers-*:latest`) | ✅ |
 | Versioned tags | ✅ (latest version only) |
 | Older versions | ❌ |
 
 ### Dev variants (`-dev` tags)
 
-Some images publish a `:latest-dev` companion tag (e.g. `minimal-ruby:latest-dev`) that adds a shell, package manager, compiler toolchain, and language-specific build dependencies on top of the prod runtime. They are intended for CI build stages and in-pod debugging — **not for production deployment**.
+Some images publish a `:latest-dev` companion tag (e.g. `containers-ruby:latest-dev`) that adds a shell, package manager, compiler toolchain, and language-specific build dependencies on top of the prod runtime. They are intended for CI build stages and in-pod debugging — **not for production deployment**.
 
 Dev variants:
 
@@ -28,7 +28,7 @@ Use the prod tag (`:latest`) for runtime workloads. Use the dev tag (`:latest-de
 If you discover a security vulnerability in this project's **build infrastructure, workflows, or container configurations**, please report it responsibly:
 
 1. **Do NOT open a public GitHub issue** for security vulnerabilities.
-2. Use [GitHub's private vulnerability reporting](https://github.com/rtvkiz/minimal/security/advisories/new) to submit your report.
+2. Use [GitHub's private vulnerability reporting](https://github.com/alexander-nemtsov/containers/security/advisories/new) to submit your report.
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
@@ -66,9 +66,9 @@ Every published image is signed with [cosign](https://github.com/sigstore/cosign
 
 ```bash
 cosign verify \
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+  --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/rtvkiz/minimal-python:latest
+  ghcr.io/alexander-nemtsov/containers-python:latest
 ```
 
 ### 2. Verify the SBOM attestation (SPDX)
@@ -76,9 +76,9 @@ cosign verify \
 ```bash
 cosign verify-attestation \
   --type spdxjson \
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+  --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/rtvkiz/minimal-python:latest \
+  ghcr.io/alexander-nemtsov/containers-python:latest \
   | jq -r '.payload | @base64d | fromjson | .predicate' \
   > python-sbom.spdx.json
 ```
@@ -86,7 +86,7 @@ cosign verify-attestation \
 The same SBOM is also reachable via the legacy attachment:
 
 ```bash
-cosign download sbom ghcr.io/rtvkiz/minimal-python:latest > python-sbom.spdx.json
+cosign download sbom ghcr.io/alexander-nemtsov/containers-python:latest > python-sbom.spdx.json
 ```
 
 ### 3. Verify the SLSA build provenance
@@ -95,8 +95,8 @@ Using the GitHub CLI (recommended — checks the built-in attestation store):
 
 ```bash
 gh attestation verify \
-  oci://ghcr.io/rtvkiz/minimal-python:latest \
-  --owner rtvkiz
+  oci://ghcr.io/alexander-nemtsov/containers-python:latest \
+  --owner alexander-nemtsov
 ```
 
 Or using cosign directly (verifies against the registry-attached attestation):
@@ -104,9 +104,9 @@ Or using cosign directly (verifies against the registry-attached attestation):
 ```bash
 cosign verify-attestation \
   --type slsaprovenance1 \
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+  --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/rtvkiz/minimal-python:latest
+  ghcr.io/alexander-nemtsov/containers-python:latest
 ```
 
 The provenance predicate identifies the exact GitHub Actions workflow, commit SHA, and build inputs that produced the image — sufficient for [SLSA Level 3](https://slsa.dev/spec/v1.0/levels#build-l3).

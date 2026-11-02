@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-metrics-server (prod).
+# Smoke test for containers-metrics-server (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

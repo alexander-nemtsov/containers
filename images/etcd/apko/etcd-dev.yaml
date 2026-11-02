@@ -1,4 +1,4 @@
-# Development variant of minimal-etcd.
+# Development variant of containers-etcd.
 # Same etcd + etcdctl + etcdutl (source-built via melange) as prod,
 # plus bash, apk-tools, curl/socat/jq for HTTP/gRPC API debugging.
 #
@@ -72,10 +72,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-etcd-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-etcd: same etcd + etcdctl + etcdutl + shell + curl/socat/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/etcd"
+  org.opencontainers.image.title: "containers-etcd-dev"
+  org.opencontainers.image.description: "Dev variant of containers-etcd: same etcd + etcdctl + etcdutl + shell + curl/socat/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/etcd"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

@@ -62,10 +62,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-vector"
+  org.opencontainers.image.title: "containers-vector"
   org.opencontainers.image.description: "Hardened shell-less Vector observability data pipeline built on Wolfi with CVE patches on every rebuild"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/vector"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/vector"
   org.opencontainers.image.licenses: "MPL-2.0"
 
 archs:

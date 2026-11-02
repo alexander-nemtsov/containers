@@ -1,4 +1,4 @@
-# Development variant of minimal-gitleaks.
+# Development variant of containers-gitleaks.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -52,10 +52,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-gitleaks-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-gitleaks: same gitleaks + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/gitleaks"
+  org.opencontainers.image.title: "containers-gitleaks-dev"
+  org.opencontainers.image.description: "Dev variant of containers-gitleaks: same gitleaks + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/gitleaks"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

@@ -39,7 +39,7 @@ const description =
 
       <h2 class="section-title" style="margin-top:44px">Where Minimal still has a case</h2>
       <ul>
-        <li><b>You can read the whole thing.</b> {images.length} images, every build recipe MIT-licensed in <a href="https://github.com/rtvkiz/minimal" rel="noopener">one repo</a>. Auditing a catalog this size end to end is a day's work, not a project.</li>
+        <li><b>You can read the whole thing.</b> {images.length} images, every build recipe MIT-licensed in <a href="https://github.com/alexander-nemtsov/containers" rel="noopener">one repo</a>. Auditing a catalog this size end to end is a day's work, not a project.</li>
         <li><b>No vendor in the loop.</b> Not a free tier of a commercial product with a pricing page attached — there is no paid tier to be moved onto, and MIT recipes mean you can fork and self-host the whole pipeline if the project stops.</li>
         <li><b>Modifiable by design.</b> The point is partly that you can take the melange and apko recipes and build your own catalog with your own controls. Docker's images are Apache-2.0 too, but the pipeline that produces them is not the product.</li>
         <li><b>Published comparison data.</b> Scan results against other providers with the raw dataset and the losing rows included — see <a href="/compare/minimus/">Minimus</a> and <a href="/compare/chainguard/">Chainguard</a>.</li>
@@ -62,8 +62,8 @@ const description =
         all. Those are narrower reasons than &ldquo;it's free&rdquo;, and they are the real ones.
       </p>
 
-      <CopyButton code={`docker pull ghcr.io/rtvkiz/minimal-python:latest
-grype ghcr.io/rtvkiz/minimal-python:latest`} />
+      <CopyButton code={`docker pull ghcr.io/alexander-nemtsov/containers-python:latest
+grype ghcr.io/alexander-nemtsov/containers-python:latest`} />
 
       <p class="small muted" style="margin-top:28px">
         Docker's announcement and current terms are the authority on what Docker Hardened Images

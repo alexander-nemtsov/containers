@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-dnsmasq-dev.
+# Smoke test for containers-dnsmasq-dev.
 # Same functional checks as prod, PLUS: a shell IS present, and the DNS
 # debugging tools (dig) are available.
 set -eu

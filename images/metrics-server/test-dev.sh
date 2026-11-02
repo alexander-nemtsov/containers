@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-metrics-server-dev.
+# Smoke test for containers-metrics-server-dev.
 # Same functional checks as prod, PLUS: a shell IS present and the TLS/HTTP
 # debugging tools are available.
 set -eu

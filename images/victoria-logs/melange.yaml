@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-victoria-logs
+# Melange build configuration for containers-victoria-logs
 # VictoriaLogs log database built from source via melange.
 
 package:

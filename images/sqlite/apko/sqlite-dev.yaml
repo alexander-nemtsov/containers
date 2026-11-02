@@ -1,4 +1,4 @@
-# Development variant of minimal-sqlite.
+# Development variant of containers-sqlite.
 # Same sqlite3 CLI from prod, plus bash, apk-tools, curl/jq for HTTP
 # convenience. SQLite is embedded — no separate server daemon, so this
 # is really a debugger/explorer image not a daemon-style dev.
@@ -73,10 +73,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-sqlite-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-sqlite: same sqlite3 CLI + shell + curl/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/sqlite"
+  org.opencontainers.image.title: "containers-sqlite-dev"
+  org.opencontainers.image.description: "Dev variant of containers-sqlite: same sqlite3 CLI + shell + curl/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/sqlite"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

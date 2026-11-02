@@ -1,4 +1,4 @@
-# Development variant of minimal-zot.
+# Development variant of containers-zot.
 # Same zot from prod, plus a shell and registry-troubleshooting tools
 # (curl/jq for the /v2/ API, skopeo-style inspection via zli).
 #
@@ -67,10 +67,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-zot-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-zot: same zot + shell and curl/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/zot"
+  org.opencontainers.image.title: "containers-zot-dev"
+  org.opencontainers.image.description: "Dev variant of containers-zot: same zot + shell and curl/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/zot"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

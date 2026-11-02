@@ -1,4 +1,4 @@
-# Development variant of minimal-patroni.
+# Development variant of containers-patroni.
 # Same Patroni + PostgreSQL from prod, plus a shell and the tools needed to
 # inspect a failing HA cluster (psql, etcdctl-style HTTP probes, JSON parsing).
 #
@@ -76,10 +76,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-patroni-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-patroni: same Patroni + PostgreSQL, plus a shell, psql, curl and jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/patroni"
+  org.opencontainers.image.title: "containers-patroni-dev"
+  org.opencontainers.image.description: "Dev variant of containers-patroni: same Patroni + PostgreSQL, plus a shell, psql, curl and jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/patroni"
   org.opencontainers.image.licenses: "MIT"
   dev.minimal.variant: "dev"
 

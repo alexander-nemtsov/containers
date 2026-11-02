@@ -53,10 +53,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-nats"
+  org.opencontainers.image.title: "containers-nats"
   org.opencontainers.image.description: "Hardened shell-less NATS Server image built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/nats"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/nats"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

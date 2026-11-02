@@ -1,4 +1,4 @@
-# Development variant of minimal-postgres-slim.
+# Development variant of containers-postgres-slim.
 # Same PostgreSQL 18 + client tools as prod, plus shell, apk-tools,
 # gosu (for user switching in init scripts), curl, socat, jq.
 #
@@ -107,10 +107,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-postgres-slim-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-postgres-slim: same PostgreSQL + shell + psql/curl/socat/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/postgres-slim"
+  org.opencontainers.image.title: "containers-postgres-slim-dev"
+  org.opencontainers.image.description: "Dev variant of containers-postgres-slim: same PostgreSQL + shell + psql/curl/socat/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/postgres-slim"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

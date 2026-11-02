@@ -1,4 +1,4 @@
-# Development variant of minimal-nginx.
+# Development variant of containers-nginx.
 # Same nginx mainline + config packages as prod, plus bash, apk-tools,
 # curl + openssl CLI (cert/TLS debugging), bind-tools (DNS resolution
 # checks for upstream blocks).
@@ -80,10 +80,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-nginx-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-nginx: same nginx mainline + shell + curl/openssl/dig for HTTP/TLS/DNS debugging. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/nginx"
+  org.opencontainers.image.title: "containers-nginx-dev"
+  org.opencontainers.image.description: "Dev variant of containers-nginx: same nginx mainline + shell + curl/openssl/dig for HTTP/TLS/DNS debugging. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/nginx"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

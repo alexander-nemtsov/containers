@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-temporal-admin-tools
+# Melange build configuration for containers-temporal-admin-tools
 # Temporal admin and schema tooling built from source
 
 package:

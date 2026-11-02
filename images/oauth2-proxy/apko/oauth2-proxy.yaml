@@ -30,10 +30,10 @@ environment:
   PATH: /usr/bin:/bin
 
 annotations:
-  org.opencontainers.image.title: "minimal-oauth2-proxy"
+  org.opencontainers.image.title: "containers-oauth2-proxy"
   org.opencontainers.image.description: "Hardened shell-less OAuth2 Proxy (OIDC/OAuth2 authenticating reverse proxy) built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/oauth2-proxy"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/oauth2-proxy"
   org.opencontainers.image.licenses: "MIT"
 
 archs:

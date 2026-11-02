@@ -198,7 +198,7 @@ pipeline:
       # Empty placeholder so //go:embed app/dist matches. Filename must NOT
       # start with `.` or `_` — Go's embed silently skips those.
       mkdir -p ui/app/dist
-      echo 'Alertmanager web UI is intentionally not shipped in minimal-alertmanager. Use the API at /api/v2/.' \
+      echo 'Alertmanager web UI is intentionally not shipped in containers-alertmanager. Use the API at /api/v2/.' \
         > ui/app/dist/index.html
 
       BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)

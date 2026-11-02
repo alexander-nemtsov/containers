@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kong-dev.
+# Smoke test for containers-kong-dev.
 # Same functional checks as prod, PLUS: bash/curl/jq are available.
 set -eu
 : "${IMAGE:?IMAGE env var required}"

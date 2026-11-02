@@ -1,4 +1,4 @@
-# Development variant of minimal-envoy.
+# Development variant of containers-envoy.
 # Same source-built envoy as prod, plus shell, apk-tools,
 # curl/openssl/dig + jq (envoy /stats and /config_dump emit JSON).
 
@@ -67,10 +67,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-envoy-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-envoy: same envoy + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/envoy"
+  org.opencontainers.image.title: "containers-envoy-dev"
+  org.opencontainers.image.description: "Dev variant of containers-envoy: same envoy + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/envoy"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

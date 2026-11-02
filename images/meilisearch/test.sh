@@ -14,7 +14,7 @@ if [ -z "$EXPECTED" ]; then
   exit 1
 fi
 
-container="minimal-meilisearch-test-$$"
+container="containers-meilisearch-test-$$"
 cleanup() {
   docker rm -f "$container" >/dev/null 2>&1 || true
 }

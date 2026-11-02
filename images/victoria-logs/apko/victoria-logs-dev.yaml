@@ -1,4 +1,4 @@
-# Development variant of minimal-victoria-logs.
+# Development variant of containers-victoria-logs.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -56,10 +56,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-victoria-logs-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-victoria-logs: same binary plus shell, curl, openssl, dig and jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/victoria-logs"
+  org.opencontainers.image.title: "containers-victoria-logs-dev"
+  org.opencontainers.image.description: "Dev variant of containers-victoria-logs: same binary plus shell, curl, openssl, dig and jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/victoria-logs"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

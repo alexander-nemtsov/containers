@@ -84,10 +84,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-opensearch"
+  org.opencontainers.image.title: "containers-opensearch"
   org.opencontainers.image.description: "Hardened OpenSearch 3.x image on Wolfi with OpenJDK 21, daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/opensearch"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/opensearch"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

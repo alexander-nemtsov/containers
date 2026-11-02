@@ -66,10 +66,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-perl"
+  org.opencontainers.image.title: "containers-perl"
   org.opencontainers.image.description: "Hardened shell-less Perl interpreter built from source with CVE patches on every rebuild"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/perl"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/perl"
   org.opencontainers.image.licenses: "Artistic-1.0-Perl OR GPL-1.0-or-later"
 
 archs:

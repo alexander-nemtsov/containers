@@ -40,10 +40,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-fluent-bit"
+  org.opencontainers.image.title: "containers-fluent-bit"
   org.opencontainers.image.description: "Hardened Fluent Bit log processor built from source"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/fluent-bit"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/fluent-bit"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

@@ -52,10 +52,10 @@ environment:
   PATH: /usr/bin:/bin
 
 annotations:
-  org.opencontainers.image.title: "minimal-kube-vip"
+  org.opencontainers.image.title: "containers-kube-vip"
   org.opencontainers.image.description: "Hardened shell-less kube-vip Kubernetes control-plane VIP and load balancer built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kube-vip"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kube-vip"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

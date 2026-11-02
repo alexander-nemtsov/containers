@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-node-slim-dev.
+# Smoke test for containers-node-slim-dev.
 # Validates shell + toolchain + node package managers while preserving
 # prod runtime parity.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI

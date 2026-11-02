@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kong (prod).
+# Smoke test for containers-kong (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

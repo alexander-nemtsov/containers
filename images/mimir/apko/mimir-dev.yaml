@@ -1,4 +1,4 @@
-# Development variant of minimal-mimir.
+# Development variant of containers-mimir.
 # Same source-built mimir + mimirtool + ca-certs, plus shell + curl/openssl/dig
 # + jq for HTTP API debugging.
 
@@ -61,10 +61,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-mimir-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-mimir: same mimir + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/mimir"
+  org.opencontainers.image.title: "containers-mimir-dev"
+  org.opencontainers.image.description: "Dev variant of containers-mimir: same mimir + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/mimir"
   org.opencontainers.image.licenses: "AGPL-3.0"
   dev.minimal.variant: "dev"
 

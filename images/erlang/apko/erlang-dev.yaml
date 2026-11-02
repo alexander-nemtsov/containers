@@ -1,4 +1,4 @@
-# Development variant of minimal-erlang.
+# Development variant of containers-erlang.
 # Same Erlang/OTP from prod, plus bash/apk-tools, the C toolchain for building
 # NIFs and ports, and rebar3 for building OTP applications.
 #
@@ -94,10 +94,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-erlang-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-erlang: same OTP + shell, C toolchain and rebar3. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/erlang"
+  org.opencontainers.image.title: "containers-erlang-dev"
+  org.opencontainers.image.description: "Dev variant of containers-erlang: same OTP + shell, C toolchain and rebar3. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/erlang"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

@@ -1,4 +1,4 @@
-# Melange build configuration for minimal-kyverno
+# Melange build configuration for containers-kyverno
 # Kyverno policy engine admission controller built from source.
 
 package:

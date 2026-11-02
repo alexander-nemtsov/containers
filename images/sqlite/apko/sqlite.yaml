@@ -60,10 +60,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-sqlite"
+  org.opencontainers.image.title: "containers-sqlite"
   org.opencontainers.image.description: "Hardened shell-less SQLite image built on Wolfi with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/sqlite"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/sqlite"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

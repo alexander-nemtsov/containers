@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-step-cli-dev.
+# Smoke test for containers-step-cli-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

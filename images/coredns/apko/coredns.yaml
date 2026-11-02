@@ -36,10 +36,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-coredns"
+  org.opencontainers.image.title: "containers-coredns"
   org.opencontainers.image.description: "Hardened CoreDNS DNS server built from source"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/coredns"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/coredns"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

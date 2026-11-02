@@ -1,5 +1,5 @@
 #!/bin/sh
-# Test script for minimal-java image
+# Test script for containers-java image
 # Requires IMAGE environment variable to be set
 
 set -e

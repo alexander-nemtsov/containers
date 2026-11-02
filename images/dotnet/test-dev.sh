@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-dotnet-dev.
+# Smoke test for containers-dotnet-dev.
 # Validates full SDK + shell + git on top of dotnet prod (runtime only).
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 

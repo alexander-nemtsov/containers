@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-bun-dev.
+# Smoke test for containers-bun-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

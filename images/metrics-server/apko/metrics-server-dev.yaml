@@ -1,4 +1,4 @@
-# Development variant of minimal-metrics-server.
+# Development variant of containers-metrics-server.
 # Same metrics-server from prod, plus a shell and the tools needed to work out
 # why kubelet scraping fails (TLS/DNS/HTTP probing).
 #
@@ -60,10 +60,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-metrics-server-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-metrics-server: same binary + shell, curl/jq/openssl and dig. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/metrics-server"
+  org.opencontainers.image.title: "containers-metrics-server-dev"
+  org.opencontainers.image.description: "Dev variant of containers-metrics-server: same binary + shell, curl/jq/openssl and dig. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/metrics-server"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

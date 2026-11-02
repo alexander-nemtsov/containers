@@ -1,4 +1,4 @@
-# Development variant of minimal-skopeo.
+# Development variant of containers-skopeo.
 # Same source-built skopeo as prod, plus a shell and debugging tools
 # (curl/openssl for registry endpoints, jq for manifests).
 #
@@ -59,10 +59,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-skopeo-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-skopeo: same skopeo + shell + curl/openssl/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/skopeo"
+  org.opencontainers.image.title: "containers-skopeo-dev"
+  org.opencontainers.image.description: "Dev variant of containers-skopeo: same skopeo + shell + curl/openssl/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/skopeo"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

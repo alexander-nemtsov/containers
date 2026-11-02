@@ -140,10 +140,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-timescaledb"
+  org.opencontainers.image.title: "containers-timescaledb"
   org.opencontainers.image.description: "Hardened PostgreSQL 18 + TimescaleDB (Apache-2.0-only build) with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/timescaledb"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/timescaledb"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

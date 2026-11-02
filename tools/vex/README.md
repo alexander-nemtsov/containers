@@ -40,7 +40,7 @@ worse than no statement at all.
 {
   "vulnerability": { "name": "CVE-2024-12345" },
   "products": [
-    { "@id": "pkg:oci/minimal-nginx?repository_url=ghcr.io/rtvkiz" }
+    { "@id": "pkg:oci/containers-nginx?repository_url=ghcr.io/alexander-nemtsov" }
   ],
   "status": "not_affected",
   "justification": "vulnerable_code_not_in_execute_path",

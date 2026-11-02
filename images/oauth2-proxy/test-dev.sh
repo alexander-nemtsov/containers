@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-oauth2-proxy-dev.
+# Smoke test for containers-oauth2-proxy-dev.
 set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 
 : "${IMAGE:?IMAGE env var required}"

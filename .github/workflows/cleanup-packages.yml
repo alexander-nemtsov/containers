@@ -60,7 +60,7 @@ jobs:
 
           # Package list is derived from catalog.json so it never drifts.
           for name in $(jq -r '.images[].name' catalog.json); do
-            pkg="minimal-${name}"
+            pkg="containers-${name}"
             echo "── ${pkg}"
 
             versions=$(gh api "/users/${OWNER}/packages/container/${pkg}/versions" --paginate \

@@ -1,4 +1,4 @@
-# Development variant of minimal-descheduler.
+# Development variant of containers-descheduler.
 
 contents:
   repositories:
@@ -42,10 +42,10 @@ environment:
   PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
 
 annotations:
-  org.opencontainers.image.title: "minimal-descheduler-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-descheduler: same binaries + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/descheduler"
+  org.opencontainers.image.title: "containers-descheduler-dev"
+  org.opencontainers.image.description: "Dev variant of containers-descheduler: same binaries + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/descheduler"
   org.opencontainers.image.licenses: "Apache-2.0"
 
   dev.minimal.variant: "dev"

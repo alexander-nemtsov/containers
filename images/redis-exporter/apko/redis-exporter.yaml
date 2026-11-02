@@ -51,10 +51,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-redis-exporter"
+  org.opencontainers.image.title: "containers-redis-exporter"
   org.opencontainers.image.description: "Hardened shell-less Redis exporter for Prometheus built from source via melange with CVE patches on every rebuild"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/redis-exporter"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/redis-exporter"
   org.opencontainers.image.licenses: "MIT"
 
 archs:

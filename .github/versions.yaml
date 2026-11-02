@@ -1100,7 +1100,7 @@
 
 - name: redis
   cron-enabled: true   # wave 5
-  image-name: minimal-redis-slim
+  image-name: containers-redis-slim
   files: [images/redis-slim/melange.yaml]
   source:
     type: scrape

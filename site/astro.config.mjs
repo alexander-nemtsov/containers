@@ -61,7 +61,7 @@ const imageDates = (() => {
 })();
 
 // --- legacy image URLs -------------------------------------------------------
-// Three images publish as minimal-<x>-slim but are addressed on the site as
+// Three images publish as containers-<x>-slim but are addressed on the site as
 // /images/<x>/ (see site/src/lib/catalog.ts). Anything already linking or
 // indexed at the old path has to land on the new one rather than 404.
 //
@@ -106,11 +106,10 @@ const lastmodFor = (pathname) => {
   return gitDate(file) ?? gitDate(`src/pages${pathname}index.astro`);
 };
 
-// minimalcontainers.com is an apex custom domain on GitHub Pages, so the site
-// is served from the root — no `base` path (unlike the old project-pages URL
-// https://rtvkiz.github.io/minimal/ which needed base: '/minimal/').
+// catalog.nexaflow.by is an apex custom domain on GitHub Pages, so the site
+// is served from the root — no `base` path needed.
 export default defineConfig({
-  site: 'https://minimalcontainers.com',
+  site: 'https://catalog.nexaflow.by',
   trailingSlash: 'ignore',
   redirects: legacyImageRedirects,
   build: {

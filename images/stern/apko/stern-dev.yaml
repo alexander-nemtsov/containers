@@ -1,4 +1,4 @@
-# Development variant of minimal-stern.
+# Development variant of containers-stern.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -35,10 +35,10 @@ environment:
   PATH: /usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
 
 annotations:
-  org.opencontainers.image.title: "minimal-stern-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-stern: same stern + shell + curl/openssl/dig/jq/git. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/stern"
+  org.opencontainers.image.title: "containers-stern-dev"
+  org.opencontainers.image.description: "Dev variant of containers-stern: same stern + shell + curl/openssl/dig/jq/git. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/stern"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

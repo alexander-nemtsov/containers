@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kvrocks (prod).
+# Smoke test for containers-kvrocks (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

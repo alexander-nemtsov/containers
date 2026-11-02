@@ -1,11 +1,11 @@
 # Maintainers
 
-This file lists the maintainers of the minimal project, in alphabetical order
+This file lists the maintainers of this project, in alphabetical order
 by GitHub handle.
 
 | Name | GitHub | Role |
 |---|---|---|
-| Ritvik Arya | [@rtvkiz](https://github.com/rtvkiz) | Maintainer |
+| Alexander Nemtsov | [@alexander-nemtsov](https://github.com/alexander-nemtsov) | Maintainer |
 
 ## Becoming a maintainer
 

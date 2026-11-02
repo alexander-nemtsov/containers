@@ -1,6 +1,6 @@
-# Development variant of minimal-kubectl.
+# Development variant of containers-kubectl.
 # Same kubectl binary, plus shell + curl + git + jq for cluster-debug workflows.
-# Not intended for production CI use — prefer minimal-kubectl for that.
+# Not intended for production CI use — prefer containers-kubectl for that.
 
 contents:
   repositories:
@@ -58,10 +58,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-kubectl-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-kubectl: same kubectl CLI + shell + curl/git/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/kubectl"
+  org.opencontainers.image.title: "containers-kubectl-dev"
+  org.opencontainers.image.description: "Dev variant of containers-kubectl: same kubectl CLI + shell + curl/git/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/kubectl"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

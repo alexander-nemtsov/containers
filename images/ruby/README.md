@@ -1,4 +1,4 @@
-# minimal-ruby
+# containers-ruby
 
 Ruby 4.0.x runtime built from source.
 
@@ -6,7 +6,7 @@ Ruby 4.0.x runtime built from source.
 
 To keep the CVE count at zero, the build replaces or removes a handful of gems that ship with stock Ruby 4.0.4. This matches the curation Chainguard applies to their `cgr.dev/chainguard/ruby` image.
 
-| Gem | Stock Ruby 4.0.4 | minimal-ruby | Why |
+| Gem | Stock Ruby 4.0.4 | containers-ruby | Why |
 |---|---|---|---|
 | `json` | 2.18.0 | **2.19.5** | 2.18.0 has a HIGH CVE; bumped to the fixed release. |
 | `net-imap` | 0.6.2 | **removed** | 5 CVEs and almost no Ruby app images need IMAP. Re-add with `gem install net-imap` if needed. |
@@ -16,7 +16,7 @@ To keep the CVE count at zero, the build replaces or removes a handful of gems t
 If you rely on any of the removed gems, install them in your Dockerfile:
 
 ```dockerfile
-FROM ghcr.io/rtvkiz/minimal-ruby:latest
+FROM ghcr.io/alexander-nemtsov/containers-ruby:latest
 RUN gem install bundler net-imap rexml
 ```
 

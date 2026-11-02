@@ -1,4 +1,4 @@
-# minimal-temporal-server — built from source via melange
+# containers-temporal-server — built from source via melange
 # Temporal workflow engine server, built from source with SLSA provenance.
 #
 # Runtime shape mirrors the published temporalio/Chainguard images so this is a
@@ -50,10 +50,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-temporal-server"
+  org.opencontainers.image.title: "containers-temporal-server"
   org.opencontainers.image.description: "Temporal workflow engine server, built from source with SLSA provenance."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/temporal-server"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/temporal-server"
   org.opencontainers.image.licenses: "MIT"
 
 archs:

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-step-ca-dev.
+# Smoke test for containers-step-ca-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

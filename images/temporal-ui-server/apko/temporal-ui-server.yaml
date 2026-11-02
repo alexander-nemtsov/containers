@@ -1,4 +1,4 @@
-# minimal-temporal-ui-server — built from source via melange
+# containers-temporal-ui-server — built from source via melange
 # Temporal Web UI server, built from source with SLSA provenance.
 #
 # Runtime shape mirrors the published temporalio/Chainguard images so this is a
@@ -48,10 +48,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-temporal-ui-server"
+  org.opencontainers.image.title: "containers-temporal-ui-server"
   org.opencontainers.image.description: "Temporal Web UI server, built from source with SLSA provenance."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/temporal-ui-server"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/temporal-ui-server"
   org.opencontainers.image.licenses: "MIT"
 
 archs:

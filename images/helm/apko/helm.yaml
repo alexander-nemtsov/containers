@@ -1,7 +1,7 @@
 # Minimal Helm CLI image - built from source via melange.
 # Shell-less, distroless. CVE patching via daily rebuilds from upstream source.
 # Helm is a CLI, not a daemon — the image is meant to be invoked as
-#   docker run --rm -v ~/.kube:/home/helm/.kube minimal-helm install ...
+#   docker run --rm -v ~/.kube:/home/helm/.kube containers-helm install ...
 # in CI pipelines and one-shot installs.
 
 contents:
@@ -29,7 +29,7 @@ accounts:
 entrypoint:
   command: /usr/bin/helm
 
-# No default cmd — `docker run minimal-helm` should print helm's usage,
+# No default cmd — `docker run containers-helm` should print helm's usage,
 # which it does via helm's built-in behavior when no subcommand is given.
 
 environment:
@@ -54,10 +54,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-helm"
+  org.opencontainers.image.title: "containers-helm"
   org.opencontainers.image.description: "Hardened shell-less Helm CLI built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/helm"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/helm"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

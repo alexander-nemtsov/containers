@@ -48,10 +48,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-trivy"
+  org.opencontainers.image.title: "containers-trivy"
   org.opencontainers.image.description: "Hardened shell-less Trivy (vulnerability/IaC/secret scanner) built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/trivy"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/trivy"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

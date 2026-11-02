@@ -77,10 +77,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-mariadb"
+  org.opencontainers.image.title: "containers-mariadb"
   org.opencontainers.image.description: "Hardened MariaDB LTS image built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/mariadb"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/mariadb"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

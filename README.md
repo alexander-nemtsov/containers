@@ -7,11 +7,11 @@
 </p>
 
 <p align="center">
-  <a href="https://minimalcontainers.com"><strong>Browse the catalog →</strong></a>
+  <a href="https://catalog.nexaflow.by"><strong>Browse the catalog →</strong></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/rtvkiz/minimal/actions/workflows/build.yml"><img src="https://github.com/rtvkiz/minimal/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
+  <a href="https://github.com/alexander-nemtsov/containers/actions/workflows/build.yml"><img src="https://github.com/alexander-nemtsov/containers/actions/workflows/build.yml/badge.svg" alt="Build status"></a>
   <img src="https://img.shields.io/badge/Images-137-0d9488" alt="Images: 137">
   <a href="https://slsa.dev/spec/v1.0/levels#build-l2"><img src="https://img.shields.io/badge/SLSA-Build_L2-0d9488" alt="SLSA Build L2"></a>
   <img src="https://img.shields.io/badge/Arch-amd64_%7C_arm64-0d9488" alt="Architectures: amd64 and arm64">
@@ -23,24 +23,24 @@
 ## Quick start
 
 ```bash
-docker pull ghcr.io/rtvkiz/minimal-python:latest
+docker pull ghcr.io/alexander-nemtsov/containers-python:latest
 ```
 
 No account needed. Every image has a `:latest-dev` companion with a shell and
 toolchain for debugging and multi-stage builds.
 
 ```bash
-docker run --rm -p 8080:80 ghcr.io/rtvkiz/minimal-nginx:latest
-docker run --rm -p 6379:6379 ghcr.io/rtvkiz/minimal-redis-slim:latest
+docker run --rm -p 8080:80 ghcr.io/alexander-nemtsov/containers-nginx:latest
+docker run --rm -p 6379:6379 ghcr.io/alexander-nemtsov/containers-redis-slim:latest
 ```
 
-**[Find an image →](https://minimalcontainers.com/images)** — all 137, with live
+**[Find an image →](https://catalog.nexaflow.by/images)** — all 137, with live
 sizes and CVE counts.
 
 ## Verify what you pulled
 
 ```bash
-gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz
+gh attestation verify oci://ghcr.io/alexander-nemtsov/containers-python:latest --owner alexander-nemtsov
 ```
 
 Every published image carries a keyless Cosign signature, an SPDX SBOM, and SLSA
@@ -65,13 +65,13 @@ replace those programs.
 ## Pinning
 
 ```dockerfile
-FROM ghcr.io/rtvkiz/minimal-python@sha256:<digest>   # immutable
-FROM ghcr.io/rtvkiz/minimal-python:3                 # patched, no major jumps
+FROM ghcr.io/alexander-nemtsov/containers-python@sha256:<digest>   # immutable
+FROM ghcr.io/alexander-nemtsov/containers-python:3                 # patched, no major jumps
 ```
 
 `:latest` crosses major versions; an exact version tag never moves at all.
 
-**[Tags and pinning →](https://minimalcontainers.com/docs/tags)**
+**[Tags and pinning →](https://catalog.nexaflow.by/docs/tags)**
 
 ## On vulnerability counts
 
@@ -80,7 +80,7 @@ results are informational — they do not block publication. The catalog shows r
 and VEX-effective counts side by side, and suppressions are reconciled against
 each fresh scan so they cannot quietly go stale.
 
-**[Reading scan results →](https://minimalcontainers.com/docs/vulnerabilities)**
+**[Reading scan results →](https://catalog.nexaflow.by/docs/vulnerabilities)**
 
 ## Contributing
 
@@ -94,7 +94,7 @@ PRs welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers tooling and layout;
 image; [`docs/roadmap.md`](docs/roadmap.md) is the demand-ranked backlog.
 
 Security issues: please use
-[private vulnerability reporting](https://github.com/rtvkiz/minimal/security/advisories/new)
+[private vulnerability reporting](https://github.com/alexander-nemtsov/containers/security/advisories/new)
 rather than a public issue.
 
 ## License

@@ -58,10 +58,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-caddy"
+  org.opencontainers.image.title: "containers-caddy"
   org.opencontainers.image.description: "Hardened shell-less Caddy web server image built from source via melange with daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/caddy"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/caddy"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

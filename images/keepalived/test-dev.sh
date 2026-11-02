@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-keepalived-dev.
+# Smoke test for containers-keepalived-dev.
 # Same functional checks as prod, PLUS: a shell IS present, and the network
 # debugging tools (ip) are available.
 set -eu

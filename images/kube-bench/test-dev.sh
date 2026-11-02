@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kube-bench-dev.
+# Smoke test for containers-kube-bench-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

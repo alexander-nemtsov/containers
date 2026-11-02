@@ -16,17 +16,17 @@ comparison content ends up wrong.
 
 ## Change the reference
 
-One repository per image on GHCR, `minimal-` prefixed:
+One repository per image on GHCR, `containers-` prefixed:
 
 ```diff
 -FROM <your-current-registry>/python:latest
-+FROM ghcr.io/rtvkiz/minimal-python:latest
++FROM ghcr.io/alexander-nemtsov/containers-python:latest
 ```
 
 No login, no account:
 
 ```
-docker pull ghcr.io/rtvkiz/minimal-python:latest
+docker pull ghcr.io/alexander-nemtsov/containers-python:latest
 ```
 
 Names follow the upstream project — `nginx`, `redis-slim`, `postgres-slim`,
@@ -42,9 +42,9 @@ wants, so decide deliberately:
 
 | You want | Pin | Behavior |
 | --- | --- | --- |
-| A byte-identical artifact | `minimal-caddy@sha256:…` | Immutable, never moves |
-| Patches without breaking upgrades | `minimal-caddy:2` | Newest release in that major line |
-| Tighter still | `minimal-caddy:2.11` | Newest patch in that minor line |
+| A byte-identical artifact | `containers-caddy@sha256:…` | Immutable, never moves |
+| Patches without breaking upgrades | `containers-caddy:2` | Newest release in that major line |
+| Tighter still | `containers-caddy:2.11` | Newest patch in that minor line |
 
 Most people want the major line. You keep getting security rebuilds and you
 never get moved across an upstream breaking release. Note that an exact version
@@ -74,14 +74,14 @@ every image has a `-dev` companion carrying a shell, package manager and
 toolchain, which exists for exactly this:
 
 ```dockerfile
-FROM ghcr.io/rtvkiz/minimal-node-slim:latest-dev AS build
+FROM ghcr.io/alexander-nemtsov/containers-node-slim:latest-dev AS build
 WORKDIR /src
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM ghcr.io/rtvkiz/minimal-node-slim:latest
+FROM ghcr.io/alexander-nemtsov/containers-node-slim:latest
 COPY --from=build --chown=65532:65532 /src/dist /app
 ENTRYPOINT ["node", "/app/server.js"]
 ```
@@ -113,7 +113,7 @@ match whatever repackaged image you were on before. Rather than guess, go and
 look:
 
 ```
-docker run --rm -it --entrypoint /bin/sh ghcr.io/rtvkiz/minimal-nginx:latest-dev
+docker run --rm -it --entrypoint /bin/sh ghcr.io/alexander-nemtsov/containers-nginx:latest-dev
 ```
 
 The **Specifications** and **Packages** tabs on each image's page list the
@@ -129,16 +129,16 @@ it.
 Provenance, which ties the image to the workflow and commit that built it:
 
 ```
-gh attestation verify oci://ghcr.io/rtvkiz/minimal-python:latest --owner rtvkiz
+gh attestation verify oci://ghcr.io/alexander-nemtsov/containers-python:latest --owner alexander-nemtsov
 ```
 
 The SBOM:
 
 ```
 cosign verify-attestation --type spdxjson \
-  --certificate-identity-regexp='https://github.com/rtvkiz/minimal/' \
+  --certificate-identity-regexp='https://github.com/alexander-nemtsov/containers/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-  ghcr.io/rtvkiz/minimal-python:latest \
+  ghcr.io/alexander-nemtsov/containers-python:latest \
   | jq -r '.payload | @base64d | fromjson | .predicate' > python-sbom.spdx.json
 ```
 
@@ -149,7 +149,7 @@ compliance program requires L3, that is a genuine reason not to migrate.
 ## Scan it before you commit to it
 
 ```
-grype ghcr.io/rtvkiz/minimal-python:latest
+grype ghcr.io/alexander-nemtsov/containers-python:latest
 ```
 
 The [full head-to-head data](/compare/minimus/) is published, raw CSV included,

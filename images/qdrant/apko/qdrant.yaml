@@ -62,10 +62,10 @@ paths:
     permissions: 0o755
 
 annotations:
-  org.opencontainers.image.title: "minimal-qdrant"
+  org.opencontainers.image.title: "containers-qdrant"
   org.opencontainers.image.description: "Hardened Qdrant vector search engine built from source via melange"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/qdrant"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/qdrant"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

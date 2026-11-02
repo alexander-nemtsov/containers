@@ -167,10 +167,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-jenkins"
+  org.opencontainers.image.title: "containers-jenkins"
   org.opencontainers.image.description: "Hardened shell-less Jenkins image with jlink custom JRE, built from source via melange"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/jenkins"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/jenkins"
   org.opencontainers.image.licenses: "Apache-2.0"
 
 archs:

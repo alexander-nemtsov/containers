@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-couchdb-dev.
+# Smoke test for containers-couchdb-dev.
 # Same functional checks as prod, PLUS: bash/curl/jq are available.
 set -eu
 : "${IMAGE:?IMAGE env var required}"

@@ -1,4 +1,4 @@
-# Development variant of minimal-python.
+# Development variant of containers-python.
 # Same Python 3.15 runtime as prod, plus shell, package manager, build
 # toolchain, pip/setuptools/uv, and common native-extension dependencies.
 # Intended for CI build stages and in-pod debugging. NOT for production.
@@ -125,10 +125,10 @@ paths:
     recursive: true
 
 annotations:
-  org.opencontainers.image.title: "minimal-python-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-python: same Python runtime + shell + build toolchain + pip/uv. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/python"
+  org.opencontainers.image.title: "containers-python-dev"
+  org.opencontainers.image.description: "Dev variant of containers-python: same Python runtime + shell + build toolchain + pip/uv. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/python"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

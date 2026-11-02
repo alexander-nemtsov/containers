@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-redis-exporter (prod).
+# Smoke test for containers-redis-exporter (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

@@ -1,4 +1,4 @@
-# Development variant of minimal-otelcol.
+# Development variant of containers-otelcol.
 contents:
   repositories:
     - https://packages.wolfi.dev/os
@@ -53,10 +53,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-otelcol-dev"
-  org.opencontainers.image.description: "Dev variant of minimal-otelcol: same OpenTelemetry Collector + shell + curl/openssl/dig/jq. Not for production."
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/otelcol"
+  org.opencontainers.image.title: "containers-otelcol-dev"
+  org.opencontainers.image.description: "Dev variant of containers-otelcol: same OpenTelemetry Collector + shell + curl/openssl/dig/jq. Not for production."
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/otelcol"
   org.opencontainers.image.licenses: "Apache-2.0"
   dev.minimal.variant: "dev"
 

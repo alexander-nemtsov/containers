@@ -20,7 +20,7 @@ ACTIONLINT_VERSION="1.7.7"
 SHELLCHECK_VERSION="0.10.0"
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cache="${XDG_CACHE_HOME:-$HOME/.cache}/minimal-workflow-lint"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/containers-workflow-lint"
 mkdir -p "$cache"
 
 # --- actionlint (pinned) ---

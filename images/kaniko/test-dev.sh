@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-kaniko-dev.
+# Smoke test for containers-kaniko-dev.
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 

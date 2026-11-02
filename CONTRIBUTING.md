@@ -42,7 +42,7 @@ minimal/
 │   └── workflows/                # build, update, security, site, and cleanup automation
 ├── catalog.json                  # canonical public image inventory
 ├── docs/                         # onboarding, update, and variant standards
-├── site/                         # minimalcontainers.com Astro site
+├── site/                         # catalog.nexaflow.by Astro site
 ├── Makefile
 └── README.md
 ```
@@ -55,6 +55,11 @@ minimal/
 > and the build/test patterns, versions.yaml conventions, and gotchas). Onboard
 > from the checklist, not from memory: two past incidents (the "frozen-8" and the
 > catalog-drift PR failure) were skipped-step bugs.
+>
+> To understand the machinery the image plugs into, see
+> [`docs/build-pipeline.md`](docs/build-pipeline.md) (CI job graph, update loops,
+> signing) and [`docs/version-management.md`](docs/version-management.md) (the
+> two-loop update model).
 
 Adding an image is mechanical. Every registration point:
 
@@ -180,7 +185,7 @@ chmod +x <image-name>/test.sh
 Test locally:
 
 ```bash
-IMAGE=ghcr.io/<owner>/minimal-<image-name>:latest ./<image-name>/test.sh
+IMAGE=ghcr.io/<owner>/containers-<image-name>:latest ./<image-name>/test.sh
 ```
 
 ### 4. Register the image with the build pipeline
@@ -329,18 +334,18 @@ make keygen
 make <image-name>
 
 # Test
-IMAGE=ghcr.io/$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')/minimal-<image-name>:latest \
+IMAGE=ghcr.io/$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')/containers-<image-name>:latest \
   ./<image-name>/test.sh
 
 # Scan
-grype ghcr.io/.../minimal-<image-name>:latest
+grype ghcr.io/.../containers-<image-name>:latest
 ```
 
 ## Conventions
 
 | Convention | Value |
 |------------|-------|
-| Image naming | `minimal-<image-name>` (kebab-case) |
+| Image naming | `containers-<image-name>` (kebab-case) |
 | Default UID/GID | 65532 (nonroot) |
 | Shell | None (distroless) unless unavoidable |
 | Entrypoint | Full path to binary (e.g., `/usr/bin/python3`) |

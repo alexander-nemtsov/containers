@@ -3,7 +3,7 @@ set -eu  # NB: no pipefail — `docker run | grep -q` is SIGPIPE-prone in CI
 : "${IMAGE:?IMAGE env var required}"
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-container="minimal-wordpress-test-$$"
+container="containers-wordpress-test-$$"
 cleanup() { docker rm -f "$container" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 

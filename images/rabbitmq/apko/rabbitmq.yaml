@@ -88,10 +88,10 @@ paths:
     permissions: 0o1777
 
 annotations:
-  org.opencontainers.image.title: "minimal-rabbitmq"
+  org.opencontainers.image.title: "containers-rabbitmq"
   org.opencontainers.image.description: "Hardened RabbitMQ image from official generic-unix release with Wolfi Erlang OTP and daily CVE patches"
-  org.opencontainers.image.url: "https://github.com/rtvkiz/minimal"
-  org.opencontainers.image.source: "https://github.com/rtvkiz/minimal/tree/main/images/rabbitmq"
+  org.opencontainers.image.url: "https://github.com/alexander-nemtsov/containers"
+  org.opencontainers.image.source: "https://github.com/alexander-nemtsov/containers/tree/main/images/rabbitmq"
   org.opencontainers.image.licenses: "MPL-2.0"
 
 archs:

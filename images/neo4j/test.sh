@@ -1,5 +1,5 @@
 #!/bin/bash
-# Smoke test for minimal-neo4j (prod).
+# Smoke test for containers-neo4j (prod).
 set -eu
 : "${IMAGE:?IMAGE env var required}"
 
@@ -25,7 +25,7 @@ echo "$na" | grep -qE '[0-9]+\.[0-9]+\.[0-9]+' \
 # bind mount would leave uid-65532-owned files the test's own (host) user
 # cannot rm. Set an initial password up front (the real product flow, same
 # as the official docker image's entrypoint) rather than disabling auth.
-vol="minimal-neo4j-test-$$"
+vol="containers-neo4j-test-$$"
 docker volume create "$vol" >/dev/null
 trap 'docker volume rm -f "$vol" >/dev/null 2>&1 || true' EXIT
 
@@ -39,7 +39,7 @@ docker run --rm -u root -v "$vol:/usr/share/neo4j/data" \
 echo "Setting the initial password (offline)..."
 docker run --rm -v "$vol:/usr/share/neo4j/data" \
   --entrypoint /usr/bin/neo4j-admin "$IMAGE" \
-  dbms set-initial-password minimal-test-password 2>&1 \
+  dbms set-initial-password containers-test-password 2>&1 \
   | grep -qi 'not.*Neo4j is running\|Changed password' \
   || true  # neo4j-admin's success output varies by version; verified functionally below instead
 
@@ -60,7 +60,7 @@ echo "HTTP endpoint is up"
 
 echo "Running a real query via cypher-shell (offline)..."
 out=$(docker run --rm --network "container:$cid" --entrypoint /usr/bin/cypher-shell "$IMAGE" \
-        -a bolt://127.0.0.1:7687 -u neo4j -p minimal-test-password --format plain 'RETURN 1 AS x;' 2>&1)
+        -a bolt://127.0.0.1:7687 -u neo4j -p containers-test-password --format plain 'RETURN 1 AS x;' 2>&1)
 echo "$out" | grep -q '^1$' \
   || { echo "FAIL: cypher-shell query did not return 1: $out"; exit 1; }
 

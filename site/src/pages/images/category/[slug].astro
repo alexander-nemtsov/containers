@@ -41,7 +41,7 @@ const schema = [{
   itemListElement: items.map((img: any, i: number) => ({
     '@type': 'ListItem',
     position: i + 1,
-    name: `minimal-${img.name}`,
+    name: `containers-${img.name}`,
     url: new URL(imageHref(img.name), Astro.site).href,
   })),
 }];
