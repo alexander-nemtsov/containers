@@ -13,10 +13,6 @@ multiple files.
 - `CONTRIBUTING.md` — friendly intro; when they disagree, onboarding.md wins.
 - `docs/version-management.md` (two-loop update model),
   `docs/dev-variants/CONVENTIONS.md` (`-dev` images).
-- `docs/build-pipeline.md` — **how the CI machinery works**: build.yml job
-  graph, runners (x86_64 is `self-hosted`!), signing/attestation retry
-  invariants, the four update loops, the GitHub-App/auto-merge chain, and the
-  "where things silently break" debug map. Read it before touching `.github/**`.
 
 ## Prime directive
 

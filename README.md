@@ -96,8 +96,3 @@ image; [`docs/roadmap.md`](docs/roadmap.md) is the demand-ranked backlog.
 Security issues: please use
 [private vulnerability reporting](https://github.com/alexander-nemtsov/containers/security/advisories/new)
 rather than a public issue.
-
-## License
-
-MIT — see [LICENSE](LICENSE). Images include Wolfi and upstream packages under
-their own licenses; each image's SPDX SBOM has the details.

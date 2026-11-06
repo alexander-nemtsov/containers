@@ -34,7 +34,13 @@ note() { printf '  \033[31m✗\033[0m %s\n' "$1"; fail=$((fail + 1)); }
 
 if [ ! -s "$IDX" ]; then
   tmp=$(mktemp -d)
-  if curl -sSfL --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 5 \
+  # Spread retries per the workflow flakiness doctrine (docs/build-pipeline.md §5):
+  # --retry alone collapses attempts into a ~15s burst that loses to Wolfi CDN
+  # rate-limit windows (validate-catalog, main 2026-11-02: single 403, no retry
+  # window long enough). --retry-delay 15 spreads over ~2min; --retry-all-errors
+  # covers HTTP 403/5xx, not just transport errors.
+  if curl -sSfL --connect-timeout 10 --max-time 120 \
+       --retry 5 --retry-delay 15 --retry-all-errors \
        https://packages.wolfi.dev/os/x86_64/APKINDEX.tar.gz -o "$tmp/i.tar.gz"; then
     tar -xzOf "$tmp/i.tar.gz" APKINDEX > "$IDX" || : > "$IDX"
   fi
